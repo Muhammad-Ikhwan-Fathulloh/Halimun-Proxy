@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halimun Request Gateway</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --surface-color: rgba(31, 40, 51, 0.45);
+            --surface-border: rgba(69, 162, 158, 0.15);
+            --accent-glow: rgba(102, 252, 241, 0.6);
+            --text-main: #c5c6c7;
+            --text-accent: #66fcf1;
+            --status-success: #38bdf8;
+            --status-error: #f43f5e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(69, 162, 158, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(102, 252, 241, 0.05) 0%, transparent 50%);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 1fr;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Sidebar Glassmorphism */
+        .sidebar {
+            background: var(--surface-color);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid var(--surface-border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 3rem;
+            text-shadow: 0 0 20px var(--accent-glow);
+            letter-spacing: 2px;
+        }
+
+        .nav-items {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-main);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1.1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(5px);
+        }
+
+        .nav-btn.active {
+            background: rgba(102, 252, 241, 0.1);
+            border: 1px solid rgba(102, 252, 241, 0.3);
+            color: var(--text-accent);
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.1);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            padding: 3rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header-auth {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 2rem;
+        }
+
+        .api-input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--surface-border);
+            color: var(--text-accent);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            width: 300px;
+            font-family: 'Fira Code', monospace;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+
+        .api-input:focus {
+            border-color: var(--text-accent);
+            box-shadow: 0 0 10px rgba(102, 252, 241, 0.2);
+        }
+
+        /* Glass Panels */
+        .panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Grid specific to Services */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .service-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(102, 252, 241, 0.4);
+        }
+        
+        .service-name { font-size: 1.2rem; color: #fff; margin-bottom: 0.5rem; }
+        .service-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(102, 252, 241, 0.15);
+            color: var(--text-accent);
+        }
+
+        /* Keys View */
+        .code-block {
+            background: #050608;
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-family: 'Fira Code', monospace;
+            color: #a9b7c6;
+            white-space: pre-wrap;
+            border: 1px solid #1a202c;
+            position: relative;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, #45a29e, #66fcf1);
+            color: #0b0c10;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 252, 241, 0.3);
+        }
+        
+        .btn-action:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 252, 241, 0.5);
+        }
+
+        /* Logs Table */
+        .logs-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--surface-border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        th {
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        td { background: rgba(0,0,0,0.2); }
+
+        tr:hover td { background: rgba(102, 252, 241, 0.05); }
+
+        .status-200 { color: var(--status-success); }
+        .status-error { color: var(--status-error); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">HALIMUN::</div>
+            <div class="nav-items">
+                <button class="nav-btn active" data-target="logs-panel">Traffic Logs</button>
+                <button class="nav-btn" data-target="services-panel">Registry</button>
+                <button class="nav-btn" data-target="keys-panel">Key Generation</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header-auth">
+                <input type="password" id="apiKeyInput" class="api-input" placeholder="Admin API Key...">
+            </div>
+
+            <!-- Traffic Logs Panel -->
+            <section id="logs-panel" class="panel active">
+                <div class="panel-title">
+                    Live Microservice Traffic
+                    <button class="btn-action" onclick="fetchLogs()" style="font-size: 0.9rem; padding: 0.5rem 1rem;">Refresh</button>
+                </div>
+                <div class="logs-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Method</th>
+                                <th>Target Url</th>
+                                <th>IP</th>
+                                <th>Latency</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Services Registry Panel -->
+            <section id="services-panel" class="panel">
+                <div class="panel-title">Active Services Registry</div>
+                <div class="services-grid" id="services-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- Keys Panel -->
+            <section id="keys-panel" class="panel">
+                <div class="panel-title">
+                    Universal Key Generator
+                    <button class="btn-action" onclick="generateKeys()">Generate New Bundle</button>
+                </div>
+                <p style="margin-bottom: 1.5rem; color: #8892b0;">Export these keys into your cross-language environments (.env files) to seamlessly sync your frontend applications with the backend Halimun proxies.</p>
+                <div class="code-block" id="keys-output">
+// Click generate to acquire keys...
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Navigation Logic
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.target).classList.add('active');
+                
+                // Auto-fetch data on tab switch
+                if(btn.dataset.target === 'logs-panel') fetchLogs();
+                if(btn.dataset.target === 'services-panel') fetchServices();
+            });
+        });
+
+        // Fetch Wrapper Setup
+        const apiBase = '/admin'; // Uses Nginx reverse proxy
+
+        async function fetchSecure(endpoint, method = 'GET') {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            if(!apiKey) {
+                alert('Please enter Admin API Key');
+                return null;
+            }
+            try {
+                const res = await fetch(`${apiBase}${endpoint}`, {
+                    method: method,
+                    headers: { 'x-admin-key': apiKey }
+                });
+                if(res.status === 401) { alert("Unauthorized: Invalid API Key"); return null; }
+                return await res.json();
+            } catch(e) {
+                console.error(e);
+                alert("Network error. Ensure proxy is running.");
+                return null;
+            }
+        }
+
+        // Fetch Logs
+        async function fetchLogs() {
+            const data = await fetchSecure('/logs');
+            if(!data) return;
+            const tbody = document.getElementById('logs-table-body');
+            tbody.innerHTML = '';
+            data.forEach(log => {
+                const tr = document.createElement('tr');
+                const time = new Date(log.timestamp).toTimeString().split(' ')[0];
+                const sCls = log.status >= 200 && log.status < 300 ? 'status-200' : 'status-error';
+                
+                tr.innerHTML = `
+                    <td>${time}</td>
+                    <td style="color:var(--text-accent)">${log.method}</td>
+                    <td>${log.target_url}</td>
+                    <td>${log.ip}</td>
+                    <td>${log.execution_ms}ms</td>
+                    <td class="${sCls}">${log.status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Fetch Services
+        async function fetchServices() {
+            const data = await fetchSecure('/services');
+            if(!data) return;
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+            data.forEach(srv => {
+                const div = document.createElement('div');
+                div.className = 'service-card';
+                div.innerHTML = `
+                    <div class="service-name">${srv.name}</div>
+                    <span class="service-badge">${srv.type}</span>
+                    <div style="margin-top: 1rem; color: #8892b0; font-size: 0.9rem;">
+                        <div>Target: ${srv.url}</div>
+                        <div>Timeout: ${srv.timeout_ms}ms</div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        // Generate Keys
+        async function generateKeys() {
+            const data = await fetchSecure('/keys/generate');
+            if(!data) return;
+            const out = document.getElementById('keys-output');
+            out.innerHTML = JSON.stringify(data, null, 4);
+        }
+    </script>
+</body>
+</html>
