@@ -8,6 +8,8 @@ pub struct ServerConfig {
     pub port: u16,
     pub admin_port: u16,
     pub admin_api_key: String,
+    pub telemetry_port: u16,
+    pub redis_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

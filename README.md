@@ -6,252 +6,190 @@
 [![CI](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions/workflows/rust.yml/badge.svg)](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Halimun (formerly Latebra) is a high-performance, ultra-low latency proxy tunnel written in Rust. It utilizes **Axum** and **Tokio** to provide non-blocking asynchronous multi-microservice routing over an AES-256-CBC encrypted tunnel with HMAC integrity checks and nonce replay protection. 
+## 📌 Overview
+Halimun (formerly Latebra) is a high-performance, ultra-low latency proxy tunnel system written in Rust. It encrypts requests end-to-end using AES-256-CBC encryption with HMAC-SHA256 integrity protection and replay attack prevention (via Nonces). 
 
-It is designed to cleanly expose an encrypted public gateway while keeping your internal microservices completely secluded within a private Docker network.
-
----
-
-## 🏗️ Architecture & Workflow
-
-Halimun acts as a gateway that decrypts secure requests from the public side, validates authentication, filters malicious traffic, and forwards it to specific backend endpoints.
-
-```mermaid
-sequenceDiagram
-    participant C as Client (Frontend/App)
-    participant N as Nginx (Edge Gateway)
-    participant H as Halimun (Rust Proxy)
-    participant B as Backend Service
-
-    Note over C, H: Client encrypts the payload.
-    C->>N: POST /proxy/1/... \n(Encrypted Token & Base32 Body)
-    N->>N: Validate Rate Limiting (100r/s)
-    N->>H: Forward Request
-    
-    activate H
-    Note over H: 1. Decode Base32<br>2. Deobfuscate (XOR 0xAC)<br>3. Decrypt AES-256-CBC
-    H->>H: Validate HMAC, Expiration (TTL), Nonce (Replay Attack)
-    H->>H: SSRF Check (Internal IP Access)
-    
-    H->>B: Forward Decrypted Request & Headers
-    deactivate H
-    
-    activate B
-    B-->>H: Response (JSON/Data)
-    deactivate B
-    
-    H-->>N: Proxy Pass Response
-    N-->>C: Return Final Response
-```
+Utilizing **Axum** and **Tokio**, Halimun provides non-blocking asynchronous routing to seamlessly expose an encrypted public gateway while keeping internal microservices completely secluded within a private Docker network.
 
 ---
 
 ## 🚀 Quick Start (Docker)
 
-Halimun is designed to be extremely lightweight and very easy to deploy with a memory footprint as low as ~15MB using Docker Alpine.
+Halimun is designed to be extremely lightweight (~15MB RAM) via Docker Alpine.
 
-**Spin everything up instantly with:**
+**1. Configuration**
+Copy the environment template and generate encryption keys natively:
+```bash
+cp .env.example .env
+
+# Generate keys using Halimun's isolated keygen
+docker build -t halimun-proxy .
+docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
+```
+Copy your `.env` contents to `config.yaml` to configure target IPs and backend maps.
+
+**2. Start the Cluster**
 ```bash
 docker-compose up -d
 ```
 *Your production proxy is now securely listening on port `80` while hiding internal systems!*
 
-### 1. Configuration & Encryption Keys Setup
-
-Clone the repository, then copy the template files:
-```bash
-cp config.example.yaml config.yaml
-cp .env.example .env
-```
-
-To guarantee absolute security, you **must** change the Encryption Keys to random values. We provide a built-in key generator through the library CLI. Build your system image and execute the key generator command:
-```bash
-# 1. Build Halimun Rust Image
-docker build -t halimun-proxy .
-
-# 2. Extract Encryption Key Configuration
-docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
-```
-_Please copy the values from the newly created `.env` file and insert them into your `config.yaml` file under the `encryption:` section._
-
-### 2. Live Re-Deployment
-
-Once your keys are safely inserted back into `config.yaml`, restart the proxy node:
-```bash
-docker-compose restart halimun-proxy
-```
-
 ---
 
-## 🔐 Dashboard Management & Security 
+## 🏗️ Architecture Layout
 
-The system provides an isolated Administrator UI at:
-**http://localhost/dashboard/**
+Client (Frontend / React / Mobile)
+   ↓ (Generates Encrypted Base32 Payload)
+Network (HTTPS)
+   ↓
+Nginx Reverse Proxy (Gateway)
+   ├─ Rate Limiting (100r/s)
+   └─ Basic Auth Protection for `/dashboard/`
+   ↓
+Halimun Engine (Rust Proxy)
+   ├─ `Token Validator` (Decrypts & Reads Targets)
+   ├─ `ReplayGuard` (DashMap nonce checking)
+   ├─ `SSRF Protection` (Validates IP masks)
+   └─ `Service Registry` (Maps to physical backends)
+   ↓
+Target Microservices (Laravel / NodeJS / Go)
 
-- Nginx authenticates Dashboard logins via **Basic HTTP Auth**.
-- Default Username: `admin`
-- Default Password: `admin123`
-
-*(To change the Password, you can create a new `.htpasswd` file using Apache or Nginx utilities and insert it into the `nginx/.htpasswd` configuration file.)*
-
-On this Dashboard, you can:
-- View **Live Traffic Logs** (Incoming requests, Targets, Latency in ms, etc).
-- See which services (Backend APIs) are currently registered.
-- **Generate API Keys** on-the-fly that can be instantly synchronized to the frontend.
-
----
-
-## 💻 Usage Guide (*Sending Encrypted Requests*)
-
-Halimun utilizes Symmetric Cryptography (AES-256-CBC), wrapped in a simple anti-pattern rotation (XOR), and mapped via Custom Base32. Your Front-End SDKs or Backend languages are not reliant on specific tooling; standard libraries are capable of computing these requirements natively.
-
-Below is the Request URL and Body format:
+### File Structure
 ```text
-POST /proxy/1/:segment_1/:segment_2/:segment_3/:segment_4/:segment_5
+halimun-proxy/
+├── src/
+│   ├── crypto/            # AES-CBC, HMAC-SHA256, XOR, Custom Base32
+│   ├── token/             # Token payloads, validation, ReplayGuard
+│   ├── security/          # Rate Limiting & SSRF internal IP blocking
+│   ├── services/          # Dynamic Routing Registry, Health, Logging
+│   ├── proxy/             # Core Axum HTTP Handler
+│   └── main.rs            # Application Bootstrapper
+├── dashboard/             # Glassmorphism HTML/JS Admin UI
+├── nginx/                 # Edge Gateway Configs (.htpasswd)
+├── examples/              # Cross-Language client integration SDKs
+├── Dockerfile             # Multi-stage minimal compiler
+└── config.yaml            # Environment and route definitions
+```
+
+---
+
+## 📦 Request & Token Format
+
+Halimun proxies requests through an encrypted tunnel using camouflage URL paths. Each request consists of:
+
+**URL Structure:**
+```text
+POST /proxy/1/SEGMENT1/SEGMENT2/SEGMENT3/SEGMENT4/SEGMENT5
+```
+Where one segment contains the genuine encrypted target parameters, while others are dummy segments used for pattern obfuscation.
+
+**Request Body (URL Encoded):**
+```text
+POST /proxy/1/XYZ...
 Content-Type: application/x-www-form-urlencoded
 
 x=ENCRYPTED_BODY_BASE32
 ```
-_Note: One of the URL segments above contains the original Decrypted Token. The rest are dummy strings for camouflage._
 
-### Integration via JavaScript / TypeScript (Frontend / React / Vue)
-You can utilize standard JavaScript SDKs like `crypto-js` on the browser.
+### Raw Request Example
+```http
+POST /proxy/1/VQYXGZL.../KQXGYZTP.../JNZWQ4T.../AB4XGZLWF.../KQXG... HTTP/1.1
+Host: your-server.com
+Content-Type: application/x-www-form-urlencoded
 
-```javascript
-import CryptoJS from 'crypto-js';
-
-// The key must match the proxy backend (.env) exactly
-const AES_KEY = CryptoJS.enc.Hex.parse(process.env.HALIMUN_AES_KEY);
-const JSON_PAYLOAD = JSON.stringify({ email: "user@example.com", auth: true });
-
-// Step 1: Standard Encryption
-const iv = CryptoJS.lib.WordArray.random(16);
-const encrypted = CryptoJS.AES.encrypt(JSON_PAYLOAD, AES_KEY, {
-    iv: iv,
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.Pkcs7
-});
-
-// Step 2: Combine IV and Ciphertext bytes (requires word-array manipulation)
-const combinedBytes = iv.concat(encrypted.ciphertext);
-
-// Step 3: Implement XOR Obfuscation (0xAC rotate left) & Base32-Halimun encoding...
-// (You can port the Rust Obfuscation function to a typescript helper script)
+x=JZSWY3DQEA5GQZJY4TSSEBQWFI7DKCJRFYYDELJYJ5HE2LMMZ2HU6DTPN5G...
 ```
 
-### Integration via PHP Backend (Laravel / Symfony)
-If you operate another microservice providing proxy requests to Halimun:
-
-```php
-$aesKey = hex2bin(env('HALIMUN_AES_KEY'));
-$iv = random_bytes(16);
-
-// Express AES-256-CBC Encryption
-$encrypted = openssl_encrypt(
-    json_encode($data), 
-    'aes-256-cbc', 
-    $aesKey, 
-    OPENSSL_RAW_DATA, 
-    $iv
-);
-
-// Prepend IV to Array
-$finalBytes = $iv . $encrypted;
-
-// Apply XOR Logic array matching the Halimun Rust implementation.
+### Token Payload Breakdown (Decrypted)
+Inside the `x=` payload is a decrypted structure representing:
+```json
+{
+  "api_url": "http://backend_target:80/api/auth/login",
+  "api_header": {
+    "Authorization": "Bearer TOKEN|ID",
+    "Content-Type": "application/json"
+  },
+  "method": "POST",
+  "timestamp": 1715517600,
+  "expired": 300,
+  "offset": "+00:00",
+  "nonce": "550e8400-e29b-41d4-a716-446655440000",
+  "hmac": "8f14e45fceea167a5a36dedd4bea2543fd7144c883569d94a7350eca6d47161"
+}
 ```
+The actual body is attached securely to this object.
 
-## 🔄 End-to-End Example Flows
+### Response Formats
+When successful, Halimun natively streams the response from the Target API exactly as provided.
 
-### 1. Frontend to Backend (Client submitting data)
-*Scenario: A React frontend sends a login request to a Laravel backend.*
-
-```mermaid
-sequenceDiagram
-    participant React as Frontend (React)
-    participant Halimun as Halimun Gateway
-    participant Laravel as Backend (Laravel)
-
-    React->>Halimun: POST /proxy/1/... \nPayload: AES { email, pass }
-    activate Halimun
-    Halimun->>Halimun: Validates Key & Decrypts
-    Halimun->>Laravel: Internal POST /api/login \n(Plaintext JSON)
-    activate Laravel
-    Laravel-->>Halimun: HTTP 200 OK + JWT Auth
-    deactivate Laravel
-    Halimun-->>React: Forward Response seamlessly
-    deactivate Halimun
+**Error Responses:**
+Invalid Encryption / Manipulated (400)
+```json
+{ "error": "Decryption failed: invalid token or key mismatch", "code": 400 }
 ```
-
-### 2. Backend to Backend (Microservice to Microservice)
-*Scenario: A Billing Microservice (PHP) needs to request User Details from a Core Microservice (NodeJS).*
-
-```mermaid
-sequenceDiagram
-    participant Billing as Billing Service (PHP)
-    participant Halimun as Halimun Engine
-    participant Core as Core Service (NodeJS)
-
-    Billing->>Halimun: POST /proxy/1/... \nPayload: Encrypted Target 'http://core'
-    activate Halimun
-    Halimun->>Halimun: Verify Cross-Service Auth & Decrypt
-    Halimun->>Core: Internal GET /api/users/1
-    activate Core
-    Core-->>Halimun: User Profile Data
-    deactivate Core
-    Halimun-->>Billing: Encrypted/Secure Relay Back
-    deactivate Halimun
+HMAC Validation Failed / Modified Data (403)
+```json
+{ "error": "Invalid HMAC", "code": 403 }
 ```
-
-### 3. Backend to Frontend (SSR or Webhooks)
-*Scenario: A Backend worker finished processing a video and notifies a Next.js Server-Side Rendering (SSR) frontend or sends Webhooks back to client infrastructure.*
-
-```mermaid
-sequenceDiagram
-    participant Worker as Backend Worker (Python)
-    participant Halimun as Halimun Gateway
-    participant NextJS as Frontend SSR (Next.js)
-
-    Worker->>Halimun: Encrypted Event Payload \nTarget 'http://nextjs_app/api/webhook'
-    activate Halimun
-    Halimun->>Halimun: Authorize Worker Identity
-    Halimun->>NextJS: POST /api/webhook (Decrypted Event)
-    activate NextJS
-    NextJS-->>Halimun: 202 Accepted (Triggers UI refresh)
-    deactivate NextJS
-    Halimun-->>Worker: Status OK
-    deactivate Halimun
+Replay Attack Detected (403)
+```json
+{ "error": "Nonce replayed (Duplicated Request)", "code": 403 }
 ```
-
-### 4. Multi-Backend & Multi-Frontend Hub Routing
-*Scenario: Halimun acts as a central hub managing dozens of microservices. The `config.yaml` maps distinct URLs, and Halimun dynamically routes them based on the `target_url` in the decrypted token.*
-
-```mermaid
-graph TD
-    UI1[Frontend A - Admin] --> |Encrypted Token Target: Service A| Halimun
-    UI2[Frontend B - Public] --> |Encrypted Token Target: Service C| Halimun
-    
-    subgraph Halimun Gateway Cluster
-    Halimun{Halimun Proxy Node}
-    end
-
-    Halimun -->|Decrypted| SrvA[Backend A - Python]
-    Halimun -->|Decrypted| SrvB[Backend B - Go]
-    Halimun -->|Decrypted| SrvC[Backend C - Laravel]
+SSRF Loop Blocked (403)
+```json
+{ "error": "Forbidden: Cannot proxy to internal addresses directly", "code": 403 }
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 🛡️ Security Features & Considerations
 
-We are constantly aiming to improve Halimun's routing bounds. Planned features include:
-- [ ] **Native Redis Clustering**: Transitioning from single-node `DashMap` nonce tracking to a distributed Redis backend for large-scale microservice replication.
-- [ ] **Advanced Telemetry**: Standardized integration with Prometheus & Grafana to expand the current Glassmorphism logging dashboard.
-- [ ] **Dynamic Key Exchange**: Auto-rotating TTL secret negotiation to avoid relying heavily on static Environment Variables.
+- ✅ **AES-256-CBC Encryption** - Military-grade symmetric packet masking.
+- ✅ **HMAC-SHA256** - Strictly validates message integrity and origin.
+- ✅ **Nonce Validation (In-Memory)** - Drop duplicate identical payloads instantly.
+- ✅ **SSRF Protection** - Prevents rogue users from targeting `127.0.0.1` or `192.168.x`.
+- ✅ **Rate Limiting** - Bucket limiters applied both natively (Rust) and via Nginx (`100 r/s`).
+- ✅ **Custom Obfuscation** - Pattern hiding via Base32 un-padded XOR 0xAC rotations.
+
+**Considerations:**
+- ⚠️ Never share encryption keys.
+- ⚠️ Ensure AES keys are exactly `64 hex characters (32 bytes)`.
+- ⚠️ Rotate keys frequently using the Admin Dashboard.
+- ⚠️ Always place Halimun behind the bundled Nginx configuration for dual-protection.
+
+---
+
+## 🤖 Analytics Dashboard
+Halimun features an isolated, framework-free Glassmorphism Administrator UI at:
+**`http://localhost/dashboard/`** (Secured via Nginx basic auth: `admin/admin123`)
+
+It acts as a control center where you can view:
+1. **Live Traffic Logs**: Watch connections routed to backend containers.
+2. **Registry Hub**: Overview active mapping destinations.
+3. **Key Exchange**: Rotate encryption credentials remotely.
+
+---
+
+## 🧪 Testing
+
+### 1. Unit Tests (Rust)
+If you have local rust (`cargo`) installed, run:
+```bash
+# Formats and validates
+cargo fmt && cargo clippy -- -D warnings
+# Runs HMAC, Encryption, and Decryption mathematics tests natively
+cargo test 
+```
+
+### 2. Standalone Examples
+Run the raw library programmatically without needing `config.yaml` or Nginx:
+```bash
+cargo run --example standalone_proxy
+```
+For native Frontend and Backend code implementation patterns, review the full setups at **`examples/clients/`** (Provides Python, Go, Node.js, and PHP implementations).
 
 ---
 
 ## 📄 License
-
 This project is open-sourced under the **MIT License**.
 See the [LICENSE](LICENSE) file or visit [Muhammad-Ikhwan-Fathulloh/Halimun-Proxy](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy) for more details.

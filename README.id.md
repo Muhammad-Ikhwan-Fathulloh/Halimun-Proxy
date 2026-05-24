@@ -6,252 +6,176 @@
 [![CI](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions/workflows/rust.yml/badge.svg)](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Halimun (sebelumnya Latebra) adalah proxy tunnel asinkronus ultra-cepat berbasi Rust. Proyek ini menggunakan **Axum** dan **Tokio** untuk memberikan perutean multi-microservice tanpa hambatan (non-blocking) di atas sebuah saluran terenkripsi AES-256-CBC yang dibalut cek integritas HMAC dan perlindungan replay attack melalui nonce.
+## 📌 Gambaran Umum
+Halimun (sebelumnya Latebra) adalah proxy tunnel asinkronus ultra-cepat berbasi Rust. Proyek ini mengenkripsi request dari ujung ke ujung menggunakan enkripsi AES-256-CBC, memvalidasinya dengan perlindungan integritas HMAC-SHA256, dan mencegah serangan duplikasi ulang menggunakan sistem perlindungan Nonce.
 
-Library ini dirancang agar dapat membuka sistem publik dengan aman, tanpa mengorbankan privasi isolasi antar layanan mikro internal Anda di dalam sebuah environment Private Docker Network.
-
----
-
-## 🏗️ Architecture & Cara Kerja
-
-Halimun bekerja sebagai sebuah penengah (gateway) yang mendekripsi permintaan aman dari sisi publik, memvalidasi otentikasinya, memfilter trafik jahat, dan meneruskannya ke spesifik backend. 
-
-```mermaid
-sequenceDiagram
-    participant C as Client (Frontend/App)
-    participant N as Nginx (Edge Gateway)
-    participant H as Halimun (Rust Proxy)
-    participant B as Backend Service
-
-    Note over C, H: Client melakukan enkripsi payload.
-    C->>N: POST /proxy/1/... \n(Encrypted Token & Body Base32)
-    N->>N: Validasi Rate Limiting (100r/s)
-    N->>H: Forward Request
-    
-    activate H
-    Note over H: 1. Decode Base32<br>2. Deobfuscate (XOR 0xAC)<br>3. Decrypt AES-256-CBC
-    H->>H: Validasi HMAC, Kadaluarsa (TTL), Nonce (Replay Attack)
-    H->>H: SSRF Check (Akses IP Internal)
-    
-    H->>B: Forward Decrypted Request & Headers
-    deactivate H
-    
-    activate B
-    B-->>H: Response (JSON/Data)
-    deactivate B
-    
-    H-->>N: Proxy Pass Response
-    N-->>C: Return Final Response
-```
+Dibangun di atas pilar **Axum** dan **Tokio**, Halimun memberikan lajur microservice multi-tenant yang tangguh, membiarkan Anda membuka gerbang keamanan murni secara publik, seraya menyembunyikan service internal secara terisolasi ke dalam Private Docker.
 
 ---
 
 ## 🚀 Quick Start (Docker)
 
-Halimun dirancang sedemikian rupa agar sangat ringan dan sangat mudah dideploy dengan footprint serendah ~15MB memori melalui Docker Alpine.
+Halimun dirancang sedemikian rupa agar sangat ringan dengan konsumsi memori serendah ~15MB melalui _container_ Docker Alpine.
 
-**Jalankan seluruh cluster secara instan dengan:**
+**1. Persiapan Config & Kunci Enkripsi**
+Lakukan clone dan gunakan _generator_ untuk mencipta Environment aman secara acak:
+```bash
+cp .env.example .env
+
+# Gunakan Image Docker untuk melakukan compile dan mencetak kunci Kriptografi
+docker build -t halimun-proxy .
+docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
+```
+Salin data di dalam `.env` yang baru terbuat tersebut dan masukkan ke dalam `config.yaml` Anda.
+
+**2. Jalankan Cluster Produksi**
 ```bash
 docker-compose up -d
 ```
-*Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` sementara target sistem internal Anda disembunyikan!*
-
-### 1. Persiapan Config & Kunci Enkripsi
-
-Lakukan _clone_ repository, lalu salin berkas _template_:
-```bash
-cp config.example.yaml config.yaml
-cp .env.example .env
-```
-
-Untuk menjamin keamanan, Anda **wajib** mengubah Kunci Enkripsi menjadi acak. Kami sudah menyediakan *generator* bawaan dari library ini. Bangun _image_ sistem Anda dan perintahkan pembuatan kunci sekali waktu:
-```bash
-# 1. Build Halimun Rust Image
-docker build -t halimun-proxy .
-
-# 2. Extract Konfigurasi Kunci Enkripsi
-docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
-```
-_Silakan salin nilai-nilai yang ada di `.env` yang baru terbuat tersebut dan sematkan ke dalam file `config.yaml` Anda pada bagian `encryption:`._
-
-### 2. Live Re-Deployment
-
-Setelah memindahkan kredensial kuat Anda masuk ke dalam `config.yaml`, restart modul proxy-nya untuk memuat kunci baru:
-```bash
-docker-compose restart halimun-proxy
-```
+*Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` sementara target sistem internal Anda disembunyikan rapat-rapat!*
 
 ---
 
-## 🔐 Manajemen Dashboard & Keamanan 
+## 🏗️ Struktur Arsitektur
 
-Sistem secara terpisah menyediakan UI Administrator di:
-**http://localhost/dashboard/**
+Klien (Frontend / React / Mobile)
+   ↓ (Menyusun request aman Base32)
+Jaringan (HTTPS Publik)
+   ↓
+Nginx Reverse Proxy (Gerbang Luar)
+   ├─ Mengatur Laju Beban (100r/s)
+   └─ Melindungi folder UI `/dashboard/` dengan HTTP Auth
+   ↓
+Mesin Halimun (Rust Proxy)
+   ├─ `Pemecah Token` (Dekripsi Logika Algoritma)
+   ├─ `ReplayGuard` (Penyaring koneksi via DashMap)
+   ├─ `SSRF Protection` (Mengeksekusi Filter IP)
+   └─ `Registry` (Menentukan Backend akhir)
+   ↓
+Layanan Target (Laravel / NodeJS / Go)
 
-- Nginx mengotentikasi login ke Dashboard melalui **Basic HTTP Auth**.
-- Username default: `admin`
-- Password default: `admin123`
-
-*(Untuk mengganti Password, Anda dapat membuat file `.htpasswd` baru dengan format utilitas Apache maupun Nginx, dan memasukannya ke file konfigurasi `nginx/.htpasswd`.)*
-
-Pada Dashboard ini, Anda dapat:
-- Melihat **Live Traffic Logs** (Siapa, Tujuan mana, Latensi ms, dll).
-- Melihat layanan (Backend API) mana saja yang telah diregistrasi.
-- **Generate API Keys** secara on-the-fly yang bisa disinkronisasikan instan ke frontend.
-
----
-
-## 💻 Panduan Penggunaan (*Mengirim Request Enkripsi*)
-
-Halimun menggunakan protokol Kriptografi Simetris AES-256-CBC, dibungkus dalam *Anti-Pattern* XOR rotasi sederhana, dan diterjemahkan via *Custom Base32*. Setiap SDK Anda di Front-End / bahasa pemrograman di Backend tidak terkunci pada tools khusus; *library* standar bisa mengatasi perhitungan tersebut.
-
-Berikut adalah format *Request* URL dan *Body*:
+### Tatanan Source Code
 ```text
-POST /proxy/1/:segmen_1/:segmen_2/:segmen_3/:segmen_4/:segmen_5
+halimun-proxy/
+├── src/
+│   ├── crypto/            # Kernel Enkripsi: AES-CBC, HMAC-SHA256, XOR, Custom Base32
+│   ├── token/             # Representasi Payload Token dan Validasi
+│   ├── security/          # Laju Batas Permintaan & Pertahanan SSRF
+│   ├── services/          # Dynamic Routing Registry, Pengawasan API & Logger
+│   ├── proxy/             # Mesin HTTP Handler (Axum Proxy)
+│   └── main.rs            # Entrypoint Inisiasi
+├── dashboard/             # Antarmuka Admin GUI (HTML & Glassmorphism UI)
+├── nginx/                 # Konfigurasi Pertahanan Gerbang Tepi
+├── examples/              # Contoh SDK Client Eksternal untuk Python, Go, Node.js dll
+├── Dockerfile             # Multi-stage Rust to Alpine
+└── config.yaml            # Pemetaan target rute API
+```
+
+---
+
+## 📦 Skema Token & Payload
+
+Hatimun menyamarkan Request lewat URL Kamuflase. Setiap koneksi berwujud:
+
+**Struktur URL:**
+```text
+POST /proxy/1/SEGMEN_1/SEGMEN_2/SEGMEN_3/SEGMEN_4/SEGMEN_5
+```
+Hanya salah satu dari Segmen URL Path di atas yang membawa identitas rahasia, sedangkan segmen-segmen lainnya diisi otomatis oleh data acak secara _random_ untuk mengecoh analisa pola penyerang.
+
+**Form Request Parameter (URL Encoded):**
+```text
+POST /proxy/1/XYZ...
 Content-Type: application/x-www-form-urlencoded
 
 x=ENCRYPTED_BODY_BASE32
 ```
-_Catatan: Salah satu segment url diatas berisi Decrypted Token asli. Sisanya merupakan teks palsu untuk kamuflase._
 
-### Integrasi JavaScript / TypeScript (Frontend / React / Vue)
-Anda dapat menggunakan SDK JS Standar seperti `crypto-js` di *browser*. 
+### Contoh Permintaan Utuh (Raw Network)
+```http
+POST /proxy/1/VQYXGZL.../KQXGYZTP.../JNZWQ4T.../AB4XGZLWF.../KQXG... HTTP/1.1
+Host: domain-anda.com
+Content-Type: application/x-www-form-urlencoded
 
-```javascript
-import CryptoJS from 'crypto-js';
-
-// Kunci ini harus sama persis dengan backend proxy (.env)
-const AES_KEY = CryptoJS.enc.Hex.parse(process.env.HALIMUN_AES_KEY);
-const JSON_PAYLOAD = JSON.stringify({ email: "user@example.com", auth: true });
-
-// Tahap 1: Enkripsi Standar
-const iv = CryptoJS.lib.WordArray.random(16);
-const encrypted = CryptoJS.AES.encrypt(JSON_PAYLOAD, AES_KEY, {
-    iv: iv,
-    mode: CryptoJS.mode.CBC,
-    padding: CryptoJS.pad.Pkcs7
-});
-
-// Tahap 2: Gabungkan byte IV dan Ciphertext (Ini membutuhkan fungsi parser word-array spesifik)
-const combinedBytes = iv.concat(encrypted.ciphertext);
-
-// Tahap 3: Implementasikan Algoritma XOR Obfuscation (0xAC rotate left) & Encode base32-halimun...
-// (Anda dapat mengkonversi fungsi Obfuscation Rust kedalam helper TypeScript sederhana)
+x=JZSWY3DQEA5GQZJY4TSSEBQWFI7DKCJRFYYDELJYJ5HE2LMMZ2HU6DTPN5G...
 ```
 
-### Integrasi PHP Backend (Laravel / Symfony)
-Jika Anda adalah microservice sisi lain yang menyuplai proxy request ke Halimun:
-
-```php
-$aesKey = hex2bin(env('HALIMUN_AES_KEY'));
-$iv = random_bytes(16);
-
-// Enkripsi Cepat AES-256-CBC
-$encrypted = openssl_encrypt(
-    json_encode($data), 
-    'aes-256-cbc', 
-    $aesKey, 
-    OPENSSL_RAW_DATA, 
-    $iv
-);
-
-// Pasang IV Ke Depan Array
-$finalBytes = $iv . $encrypted;
-
-// Terapkan XOR Array Logic seperti di Halimun Rust / Latebra lama.
+### Breakdown Payload Token (Apabila didekripsi)
+Di dalam parameter `x=` dan `url_segment`, sistem akan membongkarnya menjadi instruksi:
+```json
+{
+  "api_url": "http://backend_target:80/api/auth/login",
+  "api_header": {
+    "Authorization": "Bearer TOKEN|ID",
+    "Content-Type": "application/json"
+  },
+  "method": "POST",
+  "timestamp": 1715517600,
+  "expired": 300,
+  "offset": "+00:00",
+  "nonce": "550e8400-e29b-41d4-a716-446655440000",
+  "hmac": "8f14e45fceea167a5a36dedd4bea2543fd7144c883569d94a7350eca6d47161"
+}
 ```
 
-## 🔄 Contoh Alur Penggunaan Menyeluruh (End-to-End)
+### Response Flow & Error Status
+Bila sukses, Halimun akan mem-bypass balasan kemurnian milik Backend tanpa mengubah apapun (Bisa berwujud JSON, XML, Video Stream, dll).
 
-### 1. Frontend ke Backend (Client mengirim request data)
-*Skenario: Aplikasi React mengirimkan formulir Login ke API Laravel.*
+Namun, bila Request itu bermasalah, Halimun secara tangkas membunuhnya di garis terdepan:
+* Manipulasi Enkripsi (400): `{ "error": "Decryption failed: invalid token...", "code": 400 }`
+* Payload Diretas/Diubah (403): `{ "error": "Invalid HMAC", "code": 403 }`
+* Serangan Duplikasi Nonce (403): `{ "error": "Nonce replayed", "code": 403 }`
+* Target Mengarahkan ke IP Local Intranet (SSRF Blok) (403): `{ "error": "Forbidden: Cannot proxy to internal addresses", "code": 403 }`
 
-```mermaid
-sequenceDiagram
-    participant React as Frontend (React)
-    participant Halimun as Halimun Gateway
-    participant Laravel as Backend (Laravel)
+---
 
-    React->>Halimun: POST /proxy/1/... \nPayload: AES { email, pass }
-    activate Halimun
-    Halimun->>Halimun: Validasi Key & Dekripsi
-    Halimun->>Laravel: Internal POST /api/login \n(Plaintext JSON)
-    activate Laravel
-    Laravel-->>Halimun: HTTP 200 OK + JWT Auth
-    deactivate Laravel
-    Halimun-->>React: Teruskan Response Murni
-    deactivate Halimun
+## 🛡️ Standar Pertahanan Siber
+- ✅ **AES-256-CBC Encryption** - Mekanisme kriptografi simetris paling stabil.
+- ✅ **HMAC-SHA256** - Menjaga kesatuan payload; bila 1 karakter dimodifikasi hacker, HMAC gagal total.
+- ✅ **Nonce Memory Storage** - Mencegah pesan lama diulang (_Replay Guard_).
+- ✅ **SSRF Protection** - Memblokir keras permintaan yang mencoba mencari tau IP Intranet (`192.168.x`).
+- ✅ **Rate Limiting Ganda** - Pembatasan beban permintaan di Handle secara simultan via Nginx dan Sistem Rust.
+- ✅ **Custom Obfuscation (XOR)** - Algoritma rotasi bit tambahan menggunakan Base32 tanpa bantalan (Unpadded).
+
+---
+
+## 🤖 Analytics Dashboard
+Halimun dibekali GUI Administratif ringan (*Glassmorphism Design*) yang berdiri sendiri tanpa _framework npm_ rumit. 
+Kunjungi **`http://localhost/dashboard/`** (Kredensial Default Nginx Auth: `admin/admin123`)
+
+Fitur utama Dashboard:
+1. **Live Traffic Logs**: Memantau Request rute dan latensi detik itu juga.
+2. **Registry Hub**: Mengamati kemana Microservice ini saling tertuju secara arsitektur.
+3. **Key Exchange**: Mencetak paket AES Key dari jarak jauh.
+
+---
+
+## 🧪 Tahapan Testing
+
+### 1. Unit Tests (Murni Rust)
+Bila PC Anda terinstal konfigurasi _Rust Toolchain_ (`cargo`), silakan jalankan simulasi algoritma kriptografi lengkap:
+```bash
+cargo fmt && cargo clippy -- -D warnings
+cargo test 
 ```
 
-### 2. Backend ke Backend (Komunikasi Antar Microservice)
-*Skenario: Microservice Pembayaran (PHP) perlu menarik data Profile User dari Microservice Inti (NodeJS).*
-
-```mermaid
-sequenceDiagram
-    participant Billing as Billing Service (PHP)
-    participant Halimun as Halimun Engine
-    participant Core as Core Service (NodeJS)
-
-    Billing->>Halimun: POST /proxy/1/... \nTarget Enkripsi: 'http://core'
-    activate Halimun
-    Halimun->>Halimun: Cek Auth Antar-Layanan
-    Halimun->>Core: Internal GET /api/users/1
-    activate Core
-    Core-->>Halimun: Data Profil User
-    deactivate Core
-    Halimun-->>Billing: Relai Aman Kembali
-    deactivate Halimun
+### 2. Standalone Code Execution
+Menyalakan perute program tanpa memuat konfigurasi YAMl/Nginx:
+```bash
+cargo run --example standalone_proxy
 ```
-
-### 3. Backend ke Frontend (SSR atau Notifikasi Webhook)
-*Skenario: Sebuah Background Worker selesai memproses video (selesai dirender) lalu mengabari server Frontend SSR (Next.js) lewat Webhook.*
-
-```mermaid
-sequenceDiagram
-    participant Worker as Backend Worker (Python)
-    participant Halimun as Halimun Gateway
-    participant NextJS as Frontend SSR (Next.js)
-
-    Worker->>Halimun: Payload Notifikasi Enkripsi \nTarget 'http://nextjs_app/api/webhook'
-    activate Halimun
-    Halimun->>Halimun: Otentikasi Identitas Worker
-    Halimun->>NextJS: POST /api/webhook (Pesan Asli Didekripsi)
-    activate NextJS
-    NextJS-->>Halimun: 202 Diterima (Memicu render UI)
-    deactivate NextJS
-    Halimun-->>Worker: Status OK
-    deactivate Halimun
-```
-
-### 4. Multi-Backend & Multi-Frontend Hub Routing
-*Skenario: Halimun bertindak sebagai penghubung (Gateway) pusat yang mengelola belasan microservice. `config.yaml` memetakan berbagai URL berbeda, dan Halimun langsung menyalurkannya secara dinamis ke target yang tertulis di dalam token.*
-
-```mermaid
-graph TD
-    UI1[Frontend A - Dashboard] --> |Token Tertuju ke: Backend A| Halimun
-    UI2[Frontend B - Aplikasi] --> |Token Tertuju ke: Backend C| Halimun
-    
-    subgraph Halimun Gateway Cluster
-    Halimun{Halimun Proxy Node}
-    end
-
-    Halimun -->|Plaintext Decrypted| SrvA[Backend A - API Produk]
-    Halimun -->|Plaintext Decrypted| SrvB[Backend B - AI Engine]
-    Halimun -->|Plaintext Decrypted| SrvC[Backend C - Database Sync]
-```
+Silakan lihat implementasi Klien (_Frontend & Backend Integration SDKs_) Python, Go, Node.js, dan PHP bersemayam di dalam direkotri **`examples/clients/`**.
 
 ---
 
 ## 🗺️ Peta Jalan (Roadmap)
-
-Sistem ini terus diperbarui agar mampu melayani rute berskala _enterprise_. Penambahan fitur yang direncanakan:
-- [ ] **Native Redis Clustering**: Merubah sistem `DashMap` (penyimpan *nonce*) saat ini menjadi sistem *Redis terdistribusi* untuk mencegah *Replay Attack* saat di-deploy dalam cluster puluhan Node menggunakan Kubernetes.
-- [ ] **Advanced Telemetry**: Integrasi standar pengamatan kesehatan sistem dengan spesifikasi Prometheus & Grafana untuk mendampingi Glassmorphism GUI milik Halimun.
-- [ ] **Dynamic Key Exchange**: Sinkronisasi rotasi API Keys antar microservices di *runtime* (mencegah keharusan *hard-coded* nilai Enkripsi di `.env`).
+Sistem ini terus diperbarui agar mampu melayani rute berskala _enterprise_:
+- [ ] **Native Redis Clustering**: Merubah sistem `DashMap` saat ini menjadi sistem *Redis terdistribusi* untuk mendistribusikan *Nonce tracking* ke seluruh Klaster Kubernetes.
+- [ ] **Advanced Telemetry**: Integrasi standar kesehatan sistem Prometheus & Grafana ke Dashboard UI.
+- [ ] **Dynamic Key Exchange**: Sinkronisasi rotasi API Keys antar microservices di *runtime*.
 
 ---
 
 ## 📄 Lisensi
-
 Proyek ini bersifat *Open Source* di bawah lisensi **MIT License**.
 Lihat berkas [LICENSE](LICENSE) atau kunjungi [Muhammad-Ikhwan-Fathulloh/Halimun-Proxy](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy) untuk detail lebih lanjut.

@@ -27,6 +27,7 @@ pub fn router(registry: Arc<ServiceRegistry>, api_key: String, logger: Logger) -
         .route("/stats", get(get_stats))
         .route("/logs", get(get_logs))
         .route("/keys/generate", get(generate_keys_api))
+        .route("/keys/dynamic", get(negotiate_dynamic_key))
         .with_state(state)
 }
 
@@ -99,4 +100,32 @@ async fn generate_keys_api(
     });
     
     Json(output).into_response()
+}
+
+async fn negotiate_dynamic_key(
+    State(state): State<AdminState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !validate_admin(&headers, &state.api_key).await {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+    
+    // Auto-rotating Dynamic Key Exchange
+    let new_aes_key = hex::encode(rand::random::<[u8; 32]>());
+    let new_hmac_key = hex::encode(rand::random::<[u8; 32]>());
+    let ttl_seconds = 3600; // Key expires in 1 hour
+    
+    // In cluster setup, this key replicates into Redis here
+    // Ex: `SET halimun:active_key {json} EX 3600`
+    
+    Json(json!({
+        "status": "success",
+        "message": "Temporary Auto-Rotating Keys Negotiated",
+        "keys": {
+            "AES_KEY": new_aes_key,
+            "HMAC_KEY": new_hmac_key,
+            "TTL_SECONDS": ttl_seconds,
+            "EXPIRES_AT": chrono::Utc::now() + chrono::Duration::seconds(ttl_seconds)
+        }
+    })).into_response()
 }

@@ -128,12 +128,16 @@ async fn handle_proxy(
         Ok(res) => {
             let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::OK);
             
+            // Advance Telemetry Metrics
+            metrics::counter!("halimun_http_requests_total", "status" => status.as_u16().to_string()).increment(1);
+            
             // Extract response type, set to application/json by default
             let mut response_headers = HeaderMap::new();
             if let Some(content_type) = res.headers().get("content-type") {
                  response_headers.insert("content-type", content_type.clone());
             }
 
+            let exec_ms = (chrono::Utc::now() - start_time).num_milliseconds() as u64;
             let res_bytes = res.bytes().await.unwrap_or_default();
             state.logger.add_log(crate::services::logs::RequestLog {
                 timestamp: start_time,
@@ -142,11 +146,12 @@ async fn handle_proxy(
                 target_url: token.api_url.clone(),
                 ip: ip.to_string(),
                 status: status.as_u16(),
-                execution_ms: (chrono::Utc::now() - start_time).num_milliseconds() as u64,
+                execution_ms: exec_ms,
             }).await;
             (status, response_headers, res_bytes.to_vec()).into_response()
         }
         Err(e) => {
+            metrics::counter!("halimun_http_requests_total", "status" => "502").increment(1);
             state.logger.add_log(crate::services::logs::RequestLog {
                 timestamp: start_time,
                 method: method.to_string(),

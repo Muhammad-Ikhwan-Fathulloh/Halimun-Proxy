@@ -2,13 +2,7 @@
 
 First off, thank you for considering contributing to Halimun Proxy! It's people like you that make open-source a great community.
 
-## 🤝 How Can You Help?
-
-Because Halimun is an ultra-fast encrypted reverse proxy gateway, we are always looking for improvements in:
-1. **Cryptography Optimization**: Refining the AES-256-CBC, HMAC checks, or the XOR/Base32 rotation algorithms to reduce CPU cycle overhead.
-2. **Caching & Rate Limiting**: Expanding the `DashMap` implementations to support scalable Redis clustering for multi-node deployments.
-3. **Observability**: Giving better insight into the Dashboard (e.g. integrations with OpenTelemetry, Prometheus, etc).
-4. **Documentation**: Adding more examples or fixing typos.
+1. **Documentation**: Adding more examples or fixing typos.
 
 ## 🛠️ Development Workflow
 
