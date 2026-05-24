@@ -2,6 +2,10 @@
 
 *Baca ini dalam bahasa lain: [English](README.md), [Bahasa Indonesia](README.id.md).*
 
+![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg)
+[![CI](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions/workflows/rust.yml/badge.svg)](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Halimun (sebelumnya Latebra) adalah proxy tunnel asinkronus ultra-cepat berbasi Rust. Proyek ini menggunakan **Axum** dan **Tokio** untuk memberikan perutean multi-microservice tanpa hambatan (non-blocking) di atas sebuah saluran terenkripsi AES-256-CBC yang dibalut cek integritas HMAC dan perlindungan replay attack melalui nonce.
 
 Library ini dirancang agar dapat membuka sistem publik dengan aman, tanpa mengorbankan privasi isolasi antar layanan mikro internal Anda di dalam sebuah environment Private Docker Network.
@@ -42,9 +46,15 @@ sequenceDiagram
 
 ---
 
-## 🚀 Instalasi & Setup (menggunakan Docker)
+## 🚀 Quick Start (Docker)
 
 Halimun dirancang sedemikian rupa agar sangat ringan dan sangat mudah dideploy dengan footprint serendah ~15MB memori melalui Docker Alpine.
+
+**Jalankan seluruh cluster secara instan dengan:**
+```bash
+docker-compose up -d
+```
+*Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` sementara target sistem internal Anda disembunyikan!*
 
 ### 1. Persiapan Config & Kunci Enkripsi
 
@@ -64,13 +74,12 @@ docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
 ```
 _Silakan salin nilai-nilai yang ada di `.env` yang baru terbuat tersebut dan sematkan ke dalam file `config.yaml` Anda pada bagian `encryption:`._
 
-### 2. Mengaktifkan Server (Deployment Produksi)
+### 2. Live Re-Deployment
 
-Setelah kredensial Anda dan file `config.yaml` siap, hal yang perlu Anda kerjakan hanyalah mengeksekusinya memakai Docker Compose:
+Setelah memindahkan kredensial kuat Anda masuk ke dalam `config.yaml`, restart modul proxy-nya untuk memuat kunci baru:
 ```bash
-docker-compose up -d
+docker-compose restart halimun-proxy
 ```
-Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` localhost Anda!
 
 ---
 
@@ -230,6 +239,15 @@ graph TD
     Halimun -->|Plaintext Decrypted| SrvB[Backend B - AI Engine]
     Halimun -->|Plaintext Decrypted| SrvC[Backend C - Database Sync]
 ```
+
+---
+
+## 🗺️ Peta Jalan (Roadmap)
+
+Sistem ini terus diperbarui agar mampu melayani rute berskala _enterprise_. Penambahan fitur yang direncanakan:
+- [ ] **Native Redis Clustering**: Merubah sistem `DashMap` (penyimpan *nonce*) saat ini menjadi sistem *Redis terdistribusi* untuk mencegah *Replay Attack* saat di-deploy dalam cluster puluhan Node menggunakan Kubernetes.
+- [ ] **Advanced Telemetry**: Integrasi standar pengamatan kesehatan sistem dengan spesifikasi Prometheus & Grafana untuk mendampingi Glassmorphism GUI milik Halimun.
+- [ ] **Dynamic Key Exchange**: Sinkronisasi rotasi API Keys antar microservices di *runtime* (mencegah keharusan *hard-coded* nilai Enkripsi di `.env`).
 
 ---
 

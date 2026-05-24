@@ -2,6 +2,10 @@
 
 *Read this in other languages: [English](README.md), [Bahasa Indonesia](README.id.md).*
 
+![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg)
+[![CI](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions/workflows/rust.yml/badge.svg)](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Halimun (formerly Latebra) is a high-performance, ultra-low latency proxy tunnel written in Rust. It utilizes **Axum** and **Tokio** to provide non-blocking asynchronous multi-microservice routing over an AES-256-CBC encrypted tunnel with HMAC integrity checks and nonce replay protection. 
 
 It is designed to cleanly expose an encrypted public gateway while keeping your internal microservices completely secluded within a private Docker network.
@@ -42,9 +46,15 @@ sequenceDiagram
 
 ---
 
-## 🚀 Installation & Setup (using Docker)
+## 🚀 Quick Start (Docker)
 
 Halimun is designed to be extremely lightweight and very easy to deploy with a memory footprint as low as ~15MB using Docker Alpine.
+
+**Spin everything up instantly with:**
+```bash
+docker-compose up -d
+```
+*Your production proxy is now securely listening on port `80` while hiding internal systems!*
 
 ### 1. Configuration & Encryption Keys Setup
 
@@ -64,13 +74,12 @@ docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
 ```
 _Please copy the values from the newly created `.env` file and insert them into your `config.yaml` file under the `encryption:` section._
 
-### 2. Starting the Server (Production Deployment)
+### 2. Live Re-Deployment
 
-Once your credentials and `config.yaml` are ready, simply run it using Docker Compose:
+Once your keys are safely inserted back into `config.yaml`, restart the proxy node:
 ```bash
-docker-compose up -d
+docker-compose restart halimun-proxy
 ```
-Your production traffic can now be securely listened to on port `80` of your localhost!
 
 ---
 
@@ -230,6 +239,15 @@ graph TD
     Halimun -->|Decrypted| SrvB[Backend B - Go]
     Halimun -->|Decrypted| SrvC[Backend C - Laravel]
 ```
+
+---
+
+## 🗺️ Roadmap
+
+We are constantly aiming to improve Halimun's routing bounds. Planned features include:
+- [ ] **Native Redis Clustering**: Transitioning from single-node `DashMap` nonce tracking to a distributed Redis backend for large-scale microservice replication.
+- [ ] **Advanced Telemetry**: Standardized integration with Prometheus & Grafana to expand the current Glassmorphism logging dashboard.
+- [ ] **Dynamic Key Exchange**: Auto-rotating TTL secret negotiation to avoid relying heavily on static Environment Variables.
 
 ---
 
