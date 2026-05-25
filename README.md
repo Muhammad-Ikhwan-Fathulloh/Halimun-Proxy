@@ -38,21 +38,54 @@ docker-compose up -d
 
 ## 🏗️ Architecture Layout
 
-Client (Frontend / React / Mobile)
-   ↓ (Generates Encrypted Base32 Payload)
-Network (HTTPS)
-   ↓
-Nginx Reverse Proxy (Gateway)
-   ├─ Rate Limiting (100r/s)
-   └─ Basic Auth Protection for `/dashboard/`
-   ↓
-Halimun Engine (Rust Proxy)
-   ├─ `Token Validator` (Decrypts & Reads Targets)
-   ├─ `ReplayGuard` (DashMap nonce checking)
-   ├─ `SSRF Protection` (Validates IP masks)
-   └─ `Service Registry` (Maps to physical backends)
-   ↓
-Target Microservices (Laravel / NodeJS / Go)
+This section models how the proxy is placed within your infrastructure. Halimun stands as a gateway boundary line between the outside internet (via Nginx) and your isolated microservices.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (Frontend/Mobile)
+    participant N as Nginx (Gateway)
+    participant H as Halimun Proxy (Rust)
+    participant B as Target Microservice (Intranet)
+
+    C->>C: Generate and Encrypt Base32 Payload
+    C->>N: HTTPS POST /proxy/1/OBFUSCATED...
+    N->>N: Rate Limit (100 r/s) & Log
+    N->>H: Forward HTTP Request
+    H->>H: Decrypt Token & Validate HMAC
+    H->>H: Check Duplicate Nonce (ReplayGuard)
+    H->>H: Intranet Filter (SSRF Guard)
+    H->>B: Route to Internal Endpoint (Registry)
+    B-->>H: Native Response (JSON/HTML/Websocket)
+    H-->>N: Stream Response to Public Edge
+    N-->>C: Decrypted Data to End User
+```
+
+### 🧠 Complete Usage Concepts
+
+The lifecycle of a single request handled by Halimun goes through these strict verification posts:
+
+```mermaid
+flowchart TD
+    A[Client Edge Request] -->|Encrypt Payload via AES-256-CBC| B(Cipher Object)
+    B -->|Wrap with HMAC-SHA256| C(Final Base32)
+    C -->|Send through Camouflage URL| D[Nginx Reverse Proxy Edge]
+    D -->|Pass Rate Limiter| E[Halimun Engine]
+    E --> F{Perform Validation}
+    F -->|HMAC Modified| G[403 Invalid HMAC]
+    F -->|Duplicated Request| H[403 Replay Attack Blocked]
+    F -->|IP Spoofing Attempt| I[403 SSRF Forbidden]
+    F -->|Clean & Safe| J[Decrypt True Inner Payload]
+    J --> K[Resolve Backend from Registry YAML]
+    K --> L[Forward Request to Target Container]
+    L -->|Stream Native Results| E
+    E -->|Stream Results| D
+    D -->|Stream Results| A
+```
+
+Key Concepts within the Halimun Proxy Ecosystem:
+1. **End-to-End Payload Hiding**: The primary HTTP payload and the actual API endpoint address are strongly `encrypted` straight from the client's frontend device.
+2. **Replay Guard Immunity**: Every encrypted token brings a **Nonce** and a **Timestamp** parameter verified in-memory by Halimun (DashMap). Thus, identical spoofed curl requests recorded by bad actors will instantly be rejected at the gateway.
+3. **Camouflage URLs**: Halimun never exposes the authentic service names or routing patterns, substituting them entirely with random segments to hinder Web Application Firewalls (WAF) or human analysts from profiling your traffic.
 
 ### File Structure
 ```text

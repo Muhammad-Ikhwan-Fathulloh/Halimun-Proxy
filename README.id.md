@@ -38,21 +38,54 @@ docker-compose up -d
 
 ## 🏗️ Struktur Arsitektur
 
-Klien (Frontend / React / Mobile)
-   ↓ (Menyusun request aman Base32)
-Jaringan (HTTPS Publik)
-   ↓
-Nginx Reverse Proxy (Gerbang Luar)
-   ├─ Mengatur Laju Beban (100r/s)
-   └─ Melindungi folder UI `/dashboard/` dengan HTTP Auth
-   ↓
-Mesin Halimun (Rust Proxy)
-   ├─ `Pemecah Token` (Dekripsi Logika Algoritma)
-   ├─ `ReplayGuard` (Penyaring koneksi via DashMap)
-   ├─ `SSRF Protection` (Mengeksekusi Filter IP)
-   └─ `Registry` (Menentukan Backend akhir)
-   ↓
-Layanan Target (Laravel / NodeJS / Go)
+Bagian ini memodelkan letak proxy di dalam infrastruktur Anda. Halimun berada di tengah antara Nginx (dunia luar) dan Microservice (dunia internal).
+
+```mermaid
+sequenceDiagram
+    participant C as Klien (Frontend/Mobile)
+    participant N as Nginx (Gateway Luar)
+    participant H as Halimun Proxy (Rust)
+    participant B as Target Layanan (Backend Intranet)
+
+    C->>C: Bangun dan Enkripsi Payload ke Base32
+    C->>N: HTTPS POST /proxy/1/OBFUSCATED...
+    N->>N: Limitas Rate (100 r/s) & Log
+    N->>H: Teruskan HTTP Request
+    H->>H: Dekripsi Token & Validasi HMAC
+    H->>H: Cek Duplikasi Nonce (ReplayGuard)
+    H->>H: Tolak Filter Intranet (SSRF Guard)
+    H->>B: Hubungkan ke Endpoint Internal (Mapping Registry)
+    B-->>H: Respons Native (JSON/HTML/Websocket)
+    H-->>N: Stream Respons ke Publik
+    N-->>C: Kembalikan Data Terdekripsi ke User
+```
+
+### 🧠 Konsep Lengkap Penggunaannya
+
+Siklus sebuah Request yang ditangani Halimun melewati berbagai pos perlindungan berikut ini:
+
+```mermaid
+flowchart TD
+    A[Client Request HTTP] -->|Enkripsi Payload via AES-256-CBC| B(Enkripsi Khas)
+    B -->|Bungkus bersama HMAC-SHA256| C(Final Base32)
+    C -->|Kirim lewat URL Kamuflase| D[Nginx Reverse Proxy Edge]
+    D -->|Lewati Rate Limiter| E[Mesin Halimun]
+    E --> F{Lakukan Validasi API}
+    F -->|HMAC Rusak / Berubah| G[403 Invalid HMAC]
+    F -->|Koneksi Lampau/Double| H[403 Replay Attack Blocked]
+    F -->|Pemalsuan Internal IP| I[403 SSRF Forbidden]
+    F -->|Request Aman| J[Dekripsi Payload Sejati]
+    J --> K[Temukan Backend lewat Registry YAML]
+    K --> L[Meneruskan Request ke Target Container]
+    L -->|Streaming Balasan| E
+    E -->|Streaming Balasan| D
+    D -->|Streaming Balasan| A
+```
+
+Konsep kunci dalam ekosistem Halimun Proxy:
+1. **End-to-End Payload Hiding**: Payload utama dan endpoint API target `dirahasiakan` sejak di perangkat Front-end klien. 
+2. **Kekebalan Replay Guard**: Setiap payload memiliki **Nonce** dan **Timestamp** yang dimasukkan ke basis memori (DashMap) Halimun. Jika ada penyerang menyalin request yang persis sama, request tersebut akan dibunuh di gerbang.
+3. **URL Kamuflase**: Halimun tak pernah memakai nama target API secara aslinya, melainkan memakai deretan huruf acak. Hal ini menyulitkan Web Application Firewall (WAF) atau analis peretas saat membaca profil trafik Anda.
 
 ### Tatanan Source Code
 ```text
@@ -165,14 +198,6 @@ Menyalakan perute program tanpa memuat konfigurasi YAMl/Nginx:
 cargo run --example standalone_proxy
 ```
 Silakan lihat implementasi Klien (_Frontend & Backend Integration SDKs_) Python, Go, Node.js, dan PHP bersemayam di dalam direkotri **`examples/clients/`**.
-
----
-
-## 🗺️ Peta Jalan (Roadmap)
-Sistem ini terus diperbarui agar mampu melayani rute berskala _enterprise_:
-- [ ] **Native Redis Clustering**: Merubah sistem `DashMap` saat ini menjadi sistem *Redis terdistribusi* untuk mendistribusikan *Nonce tracking* ke seluruh Klaster Kubernetes.
-- [ ] **Advanced Telemetry**: Integrasi standar kesehatan sistem Prometheus & Grafana ke Dashboard UI.
-- [ ] **Dynamic Key Exchange**: Sinkronisasi rotasi API Keys antar microservices di *runtime*.
 
 ---
 
