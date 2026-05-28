@@ -19,10 +19,12 @@ RUN cargo build --release
 FROM alpine:3.19
 
 WORKDIR /app
-RUN apk add --no-cache libgcc
+# Add openssl and ca-certificates for reqwest/HTTPS support
+RUN apk add --no-cache libgcc openssl ca-certificates
 
 COPY --from=builder /usr/src/halimun-proxy/target/release/halimun-proxy ./halimun-proxy
 
 EXPOSE 80 9090
 
-CMD ["./halimun-proxy", "--config", "config.yaml"]
+ENTRYPOINT ["./halimun-proxy"]
+CMD ["--config", "config.yaml"]
