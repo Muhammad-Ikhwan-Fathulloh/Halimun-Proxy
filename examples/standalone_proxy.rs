@@ -1,6 +1,6 @@
 //! Minimal standalone example demonstrating how to spin up a Halimun Proxy natively
 //! without relying on the physical `config.yaml` file.
-//! 
+//!
 //! Run this example with: `cargo run --example standalone_proxy`
 
 use halimun_proxy::proxy::handler::{router, ProxyState};
