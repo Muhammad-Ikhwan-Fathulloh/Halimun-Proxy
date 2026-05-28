@@ -83,23 +83,12 @@ pub struct ServiceConfig {
     pub timeout_ms: u64,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct AppConfig {
     pub server: ServerConfig,
     pub encryption: EncryptionConfig,
     pub security: SecurityConfig,
     pub services: Vec<ServiceConfig>,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            encryption: EncryptionConfig::default(),
-            security: SecurityConfig::default(),
-            services: vec![],
-        }
-    }
 }
 
 pub fn load_config<P: AsRef<Path>>(path: P) -> Result<AppConfig, Box<dyn std::error::Error>> {
