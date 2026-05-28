@@ -8,6 +8,12 @@ pub struct ReplayGuard {
     pub cache: Arc<DashMap<String, i64>>,
 }
 
+impl Default for ReplayGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReplayGuard {
     pub fn new() -> Self {
         let cache = Arc::new(DashMap::new());
