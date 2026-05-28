@@ -38,7 +38,8 @@ impl Default for EncryptionConfig {
     fn default() -> Self {
         Self {
             aes_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
-            hmac_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+            hmac_key: "0000000000000000000000000000000000000000000000000000000000000000"
+                .to_string(),
             xor_key: 42,
             base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".to_string(),
             ttl_seconds: 60,
