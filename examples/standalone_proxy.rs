@@ -3,16 +3,16 @@
 //!
 //! Run this example with: `cargo run --example standalone_proxy`
 
-use halimun_proxy::proxy::handler::{router, ProxyState};
-use halimun_proxy::services::registry::ServiceRegistry;
-use halimun_proxy::services::logs::Logger;
-use halimun_proxy::token::replay_guard::ReplayGuard;
-use halimun_proxy::security::rate_limiter::RateLimiter;
 use halimun_proxy::config::{AppConfig, EncryptionConfig};
-use std::sync::Arc;
-use tokio::net::TcpListener;
+use halimun_proxy::proxy::handler::{router, ProxyState};
+use halimun_proxy::security::rate_limiter::RateLimiter;
+use halimun_proxy::services::logs::Logger;
+use halimun_proxy::services::registry::ServiceRegistry;
+use halimun_proxy::token::replay_guard::ReplayGuard;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
