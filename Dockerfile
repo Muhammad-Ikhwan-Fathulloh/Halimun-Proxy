@@ -1,7 +1,7 @@
-FROM rust:1.78-alpine AS builder
+FROM rust:alpine AS builder
 
 WORKDIR /usr/src/halimun-proxy
-RUN apk add --no-cache musl-dev gcc
+RUN apk add --no-cache musl-dev gcc pkgconfig openssl-dev openssl-libs-static
 
 # Create dummy src for dependency caching
 COPY Cargo.toml Cargo.lock* ./

@@ -1,13 +1,5 @@
 use clap::Parser;
 
-mod config;
-mod crypto;
-mod keygen;
-mod proxy;
-mod security;
-mod services;
-mod token;
-
 #[derive(Parser, Debug)]
 #[command(name = "halimun-proxy")]
 #[command(about = "High-performance encrypted Rust proxy", long_about = None)]
@@ -32,12 +24,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     if cli.keygen {
-        keygen::generate_keys(&cli.format);
+        halimun_proxy::keygen::generate_keys(&cli.format);
         return Ok(());
     }
 
     // Server bootstrap will be here
-    let _app_config = config::load_config(&cli.config).unwrap_or_else(|e| {
+    let _app_config = halimun_proxy::config::load_config(&cli.config).unwrap_or_else(|e| {
         eprintln!("Failed to load config: {}", e);
         std::process::exit(1);
     });
