@@ -1,10 +1,9 @@
-use crate::config::AppConfig;
 use crate::services::registry::ServiceRegistry;
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json},
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use serde_json::json;

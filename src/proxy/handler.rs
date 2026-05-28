@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, HeaderName, HeaderValue, Method, Request, StatusCode},
+    http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Json},
     routing::post,
     Router,
@@ -137,7 +137,7 @@ async fn handle_proxy(
     // 5. FORWARD REQUEST
     // We dynamically send the request to the backend microservice
     let method = Method::from_bytes(token.method.as_bytes()).unwrap_or(Method::POST);
-    let mut req_builder = state.http_client.request(method, &token.api_url);
+    let mut req_builder = state.http_client.request(method.clone(), &token.api_url);
 
     let mut req_headers = HeaderMap::new();
     for (k, v) in token.api_header {

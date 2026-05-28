@@ -22,7 +22,7 @@ pub async fn start_health_checker(registry: Arc<ServiceRegistry>) {
                 }
 
                 let health_url = format!("{}{}", service.url, service.health);
-                let is_healthy = match client.get(&health_url).send().await {
+                let _is_healthy = match client.get(&health_url).send().await {
                     Ok(resp) => resp.status().is_success(),
                     Err(_) => false,
                 };

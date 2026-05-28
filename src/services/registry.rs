@@ -1,4 +1,4 @@
-use crate::config::{ServiceConfig, ServiceType};
+use crate::config::ServiceConfig;
 use dashmap::DashMap;
 use std::sync::Arc;
 
