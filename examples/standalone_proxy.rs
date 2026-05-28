@@ -9,7 +9,6 @@ use halimun_proxy::security::rate_limiter::RateLimiter;
 use halimun_proxy::services::logs::Logger;
 use halimun_proxy::services::registry::ServiceRegistry;
 use halimun_proxy::token::replay_guard::ReplayGuard;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
@@ -22,19 +21,19 @@ async fn main() {
             aes_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(), // 64 hex characters (32 bytes)
             hmac_key: "0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),
+            xor_key: 42,
+            base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".to_string(),
             ttl_seconds: 60,
         },
         security: Default::default(),
         server: Default::default(),
-        backend: vec![],
-        frontend: vec![],
-        fullstack: vec![],
+        services: vec![],
     };
 
     // 2. Setup internal Services State
-    let registry = Arc::new(ServiceRegistry::new(Vec::new(), Vec::new(), Vec::new()));
-    let replay_guard = ReplayGuard::new(config.encryption.ttl_seconds);
-    let rate_limiter = Arc::new(RateLimiter::new());
+    let registry = Arc::new(ServiceRegistry::new(Vec::new()));
+    let replay_guard = ReplayGuard::new();
+    let rate_limiter = Arc::new(RateLimiter::new(60));
     let logger = Logger::new(100);
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
