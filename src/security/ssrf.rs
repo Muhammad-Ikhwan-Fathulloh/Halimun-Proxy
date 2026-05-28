@@ -14,7 +14,7 @@ pub fn validate_proxy_url(api_url: &str, bypass: bool, whitelist: &[String], _st
     ];
 
     for blocked in blocked_patterns {
-        if host.starts_with(blocked) || host == blocked {
+        if host.starts_with(blocked) {
             return Err("Forbidden: Cannot proxy to internal addresses");
         }
     }
