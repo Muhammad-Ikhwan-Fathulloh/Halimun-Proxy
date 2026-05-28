@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 📌 Overview
-Halimun (formerly Latebra) is a high-performance, ultra-low latency proxy tunnel system written in Rust. It encrypts requests end-to-end using AES-256-CBC encryption with HMAC-SHA256 integrity protection and replay attack prevention (via Nonces). 
+Halimun is a high-performance, ultra-low latency proxy tunnel system written in Rust. It encrypts requests end-to-end using AES-256-CBC encryption with HMAC-SHA256 integrity protection and replay attack prevention (via Nonces). 
 
 Utilizing **Axum** and **Tokio**, Halimun provides non-blocking asynchronous routing to seamlessly expose an encrypted public gateway while keeping internal microservices completely secluded within a private Docker network.
 
