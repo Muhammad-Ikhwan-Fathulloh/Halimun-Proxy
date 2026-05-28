@@ -3,6 +3,7 @@ server:
   port: 80
   admin_port: 9090
   admin_api_key: "change-me-in-production"
+  telemetry_port: 9091
 
 encryption:
   # Generate keys using: halimun-proxy --keygen
@@ -10,6 +11,7 @@ encryption:
   hmac_key: "64-hex-chars-here"
   xor_key: 172
   base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+  ttl_seconds: 3600
 
 security:
   rate_limit_per_minute: 120
