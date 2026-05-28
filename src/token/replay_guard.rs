@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use dashmap::DashMap;
+use std::sync::Arc;
 use tokio::time::{self, Duration};
 
 #[derive(Clone)]
@@ -19,7 +19,7 @@ impl ReplayGuard {
         if self.cache.contains_key(nonce) {
             return false;
         }
-        
+
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds;
         self.cache.insert(nonce.to_string(), expires_at);
         true

@@ -1,6 +1,6 @@
 use dashmap::DashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 use redis::AsyncCommands;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub struct RedisGuard {
@@ -21,7 +21,10 @@ impl RedisGuard {
     }
 
     pub async fn check_and_store_nonce(&self, nonce: &str) -> bool {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
         // 1. Check Redis if available
         if let Some(client) = &self.redis_client {
@@ -29,7 +32,10 @@ impl RedisGuard {
                 let redis_key = format!("halimun:nonce:{}", nonce);
                 let is_new: bool = con.set_nx(&redis_key, now).await.unwrap_or(false);
                 if is_new {
-                    let _: () = con.expire(&redis_key, self.ttl_seconds as i64).await.unwrap_or(());
+                    let _: () = con
+                        .expire(&redis_key, self.ttl_seconds as i64)
+                        .await
+                        .unwrap_or(());
                 }
                 return is_new; // If true, it was set (new). If false, it already existed (replay attack)
             }
@@ -39,12 +45,16 @@ impl RedisGuard {
         if self.local_cache.contains_key(nonce) {
             return false;
         }
-        self.local_cache.insert(nonce.to_string(), now + self.ttl_seconds);
+        self.local_cache
+            .insert(nonce.to_string(), now + self.ttl_seconds);
         true
     }
 
     pub fn clean_expired_local(&self) {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
         self.local_cache.retain(|_, expiry| *expiry > now);
     }
 }

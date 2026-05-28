@@ -14,7 +14,7 @@ pub fn encrypt(data: &[u8], key: &[u8], iv: &[u8; 16]) -> Option<Vec<u8>> {
     buf.resize(pos + 16, 0);
     let pt_len = enc.encrypt_padded_mut::<Pkcs7>(&mut buf, pos).ok()?.len();
     buf.truncate(pt_len);
-    
+
     // Prefix IV to ciphertext
     let mut final_bytes = iv.to_vec();
     final_bytes.extend_from_slice(&buf);
@@ -27,7 +27,7 @@ pub fn decrypt(ciphertext_with_iv: &[u8], key: &[u8]) -> Option<Vec<u8>> {
     }
     let iv = &ciphertext_with_iv[..16];
     let ciphertext = &ciphertext_with_iv[16..];
-    
+
     let dec = Aes256CbcDec::new_from_slices(key, iv).ok()?;
     let mut buf = ciphertext.to_vec();
     let pt_len = dec.decrypt_padded_mut::<Pkcs7>(&mut buf).ok()?.len();

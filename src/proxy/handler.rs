@@ -1,20 +1,20 @@
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode, Request},
+    http::{HeaderMap, HeaderName, HeaderValue, Method, Request, StatusCode},
     response::{IntoResponse, Json},
     routing::post,
     Router,
 };
-use std::sync::Arc;
 use serde_json::json;
+use std::sync::Arc;
 
-use crate::crypto::{aes_cbc, base32, obfuscation};
-use crate::token::payload::HalimunToken;
-use crate::token::validator;
-use crate::token::replay_guard::ReplayGuard;
-use crate::security::{ssrf, rate_limiter::RateLimiter};
-use crate::services::registry::ServiceRegistry;
 use crate::config::AppConfig;
+use crate::crypto::{aes_cbc, base32, obfuscation};
+use crate::security::{rate_limiter::RateLimiter, ssrf};
+use crate::services::registry::ServiceRegistry;
+use crate::token::payload::HalimunToken;
+use crate::token::replay_guard::ReplayGuard;
+use crate::token::validator;
 
 use crate::services::logs::Logger;
 
@@ -42,9 +42,11 @@ async fn handle_proxy(
     headers: HeaderMap,
     body_string: String,
 ) -> impl IntoResponse {
-    
     // 0. Rate limiting (Simplified using arbitrary IP for demo)
-    let ip = headers.get("x-real-ip").and_then(|v| v.to_str().ok()).unwrap_or("127.0.0.1");
+    let ip = headers
+        .get("x-real-ip")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("127.0.0.1");
     if !state.rate_limiter.check(ip) {
         return (StatusCode::TOO_MANY_REQUESTS, "Too many requests").into_response();
     }
@@ -70,21 +72,43 @@ async fn handle_proxy(
         }
     }
 
-    let token = match decrypted_token {
-        Some(t) => t,
-        None => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Decryption failed or invalid token", "code": 400}))).into_response(),
-    };
+    let token =
+        match decrypted_token {
+            Some(t) => t,
+            None => return (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    serde_json::json!({"error": "Decryption failed or invalid token", "code": 400}),
+                ),
+            )
+                .into_response(),
+        };
 
     // 2. Initial Validation (HMAC, Expiry, Nonce)
     let token = match validator::validate_token(token, &hmac_key, &state.replay_guard) {
         Ok(t) => t,
-        Err(e) => return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error": e, "code": 403}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(serde_json::json!({"error": e, "code": 403})),
+            )
+                .into_response()
+        }
     };
 
     // 3. SSRF validation
     let bypass = token.bypass_url.unwrap_or(false);
-    if let Err(e) = ssrf::validate_proxy_url(&token.api_url, bypass, &state.config.security.bypass_whitelist, &state.config.security.strict_domain) {
-         return (StatusCode::FORBIDDEN, Json(serde_json::json!({"error": e, "code": 403}))).into_response();
+    if let Err(e) = ssrf::validate_proxy_url(
+        &token.api_url,
+        bypass,
+        &state.config.security.bypass_whitelist,
+        &state.config.security.strict_domain,
+    ) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": e, "code": 403})),
+        )
+            .into_response();
     }
 
     // 4. Ekstrak & Dekripsi Body Data (x=ENCRYPTED_BODY_BASE32)
@@ -103,8 +127,12 @@ async fn handle_proxy(
         if let Ok(body_bytes) = base32::decode(&encrypted_body_b32, alphabet) {
             let deob = obfuscation::custom_deobfuscate(&body_bytes, xor_key);
             aes_cbc::decrypt(&deob, &aes_key).unwrap_or_default()
-        } else { Vec::new() }
-    } else { Vec::new() };
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
 
     // 5. FORWARD REQUEST
     // We dynamically send the request to the backend microservice
@@ -113,11 +141,14 @@ async fn handle_proxy(
 
     let mut req_headers = HeaderMap::new();
     for (k, v) in token.api_header {
-        if let (Ok(name), Ok(val)) = (HeaderName::from_bytes(k.as_bytes()), HeaderValue::from_str(&v)) {
+        if let (Ok(name), Ok(val)) = (
+            HeaderName::from_bytes(k.as_bytes()),
+            HeaderValue::from_str(&v),
+        ) {
             req_headers.insert(name, val);
         }
     }
-    
+
     // Add real ip propagation
     req_headers.insert("X-Forwarded-For", HeaderValue::from_str(ip).unwrap());
 
@@ -127,43 +158,53 @@ async fn handle_proxy(
     let res = match req_builder.send().await {
         Ok(res) => {
             let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::OK);
-            
+
             // Advance Telemetry Metrics
             metrics::counter!("halimun_http_requests_total", "status" => status.as_u16().to_string()).increment(1);
-            
+
             // Extract response type, set to application/json by default
             let mut response_headers = HeaderMap::new();
             if let Some(content_type) = res.headers().get("content-type") {
-                 response_headers.insert("content-type", content_type.clone());
+                response_headers.insert("content-type", content_type.clone());
             }
 
             let exec_ms = (chrono::Utc::now() - start_time).num_milliseconds() as u64;
             let res_bytes = res.bytes().await.unwrap_or_default();
-            state.logger.add_log(crate::services::logs::RequestLog {
-                timestamp: start_time,
-                method: method.to_string(),
-                path: "PROXY HIDDEN".to_string(),
-                target_url: token.api_url.clone(),
-                ip: ip.to_string(),
-                status: status.as_u16(),
-                execution_ms: exec_ms,
-            }).await;
+            state
+                .logger
+                .add_log(crate::services::logs::RequestLog {
+                    timestamp: start_time,
+                    method: method.to_string(),
+                    path: "PROXY HIDDEN".to_string(),
+                    target_url: token.api_url.clone(),
+                    ip: ip.to_string(),
+                    status: status.as_u16(),
+                    execution_ms: exec_ms,
+                })
+                .await;
             (status, response_headers, res_bytes.to_vec()).into_response()
         }
         Err(e) => {
             metrics::counter!("halimun_http_requests_total", "status" => "502").increment(1);
-            state.logger.add_log(crate::services::logs::RequestLog {
-                timestamp: start_time,
-                method: method.to_string(),
-                path: "PROXY HIDDEN".to_string(),
-                target_url: token.api_url.clone(),
-                ip: ip.to_string(),
-                status: 502,
-                execution_ms: (chrono::Utc::now() - start_time).num_milliseconds() as u64,
-            }).await;
-            (StatusCode::BAD_GATEWAY, Json(json!({"error": "Failed to reach backend service", "details": e.to_string()}))).into_response()
+            state
+                .logger
+                .add_log(crate::services::logs::RequestLog {
+                    timestamp: start_time,
+                    method: method.to_string(),
+                    path: "PROXY HIDDEN".to_string(),
+                    target_url: token.api_url.clone(),
+                    ip: ip.to_string(),
+                    status: 502,
+                    execution_ms: (chrono::Utc::now() - start_time).num_milliseconds() as u64,
+                })
+                .await;
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": "Failed to reach backend service", "details": e.to_string()})),
+            )
+                .into_response()
         }
     };
-    
+
     res
 }

@@ -20,7 +20,8 @@ async fn main() {
     let config = AppConfig {
         encryption: EncryptionConfig {
             aes_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(), // 64 hex characters (32 bytes)
-            hmac_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+            hmac_key: "0000000000000000000000000000000000000000000000000000000000000000"
+                .to_string(),
             ttl_seconds: 60,
         },
         security: Default::default(),

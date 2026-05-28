@@ -1,12 +1,12 @@
 use clap::Parser;
 
 mod config;
-mod keygen;
 mod crypto;
-mod token;
-mod security;
+mod keygen;
 mod proxy;
+mod security;
 mod services;
+mod token;
 
 #[derive(Parser, Debug)]
 #[command(name = "halimun-proxy")]
@@ -28,7 +28,7 @@ struct Cli {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
-    
+
     let cli = Cli::parse();
 
     if cli.keygen {

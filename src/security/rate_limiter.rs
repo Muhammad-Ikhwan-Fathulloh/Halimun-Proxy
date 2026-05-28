@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use dashmap::DashMap;
+use std::sync::Arc;
 
 pub struct RateLimiter {
     // Limits based on IP
@@ -19,7 +19,7 @@ impl RateLimiter {
     pub fn check(&self, ip: &str) -> bool {
         let now = chrono::Utc::now();
         let minute_key = format!("{}-{}", ip, now.format("%Y-%m-%d-%H-%M"));
-        
+
         let mut count = self.requests.entry(minute_key).or_insert(0);
         if *count >= self.limit {
             return false;

@@ -11,7 +11,7 @@ pub struct HalimunToken {
     pub expired: i64,
     pub offset: Option<String>,
     pub nonce: String,
-    
+
     // Kept optional since we remove it before validation
     pub hmac: Option<String>,
 }

@@ -12,14 +12,14 @@ pub struct KeygenArgs {
 pub fn generate_keys(format: &str) {
     let mut aes_key_bytes = [0u8; 32];
     let mut hmac_key_bytes = [0u8; 32];
-    
+
     let mut rng = rand::thread_rng();
     rng.fill_bytes(&mut aes_key_bytes);
     rng.fill_bytes(&mut hmac_key_bytes);
-    
+
     let aes_hex = hex::encode(aes_key_bytes);
     let hmac_hex = hex::encode(hmac_key_bytes);
-    
+
     let xor_key: u8 = 172; // 0xAC
     let base32_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -40,7 +40,8 @@ pub fn generate_keys(format: &str) {
             println!("  xor_key: {}", xor_key);
             println!("  base32_alphabet: \"{}\"", base32_alphabet);
         }
-        _ => { // default to env
+        _ => {
+            // default to env
             println!("HALIMUN_AES_KEY={}", aes_hex);
             println!("HALIMUN_HMAC_KEY={}", hmac_hex);
             println!("HALIMUN_XOR_KEY={}", xor_key);

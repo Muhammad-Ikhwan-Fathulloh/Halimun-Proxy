@@ -11,7 +11,7 @@ pub fn compute_hmac(data: &str, key: &[u8]) -> String {
 
 pub fn verify_hmac(data: &str, key: &[u8], expected_mac_hex: &str) -> bool {
     // We compute and do string comparison, but constant-time compare is better
-    // Since expected is hex string, we can compute ours and compare hex strings 
+    // Since expected is hex string, we can compute ours and compare hex strings
     // using constant time equality or just bytes.
     if let Ok(expected_bytes) = hex::decode(expected_mac_hex) {
         if let Ok(mut mac) = HmacSha256::new_from_slice(key) {

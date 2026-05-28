@@ -1,5 +1,5 @@
-use crate::token::payload::HalimunToken;
 use crate::crypto::hmac;
+use crate::token::payload::HalimunToken;
 
 pub fn validate_token(
     mut token: HalimunToken,
@@ -8,14 +8,15 @@ pub fn validate_token(
 ) -> Result<HalimunToken, &'static str> {
     // 1. Extract and validate HMAC
     let expected_hmac = token.hmac.take().ok_or("Missing HMAC")?;
-    
+
     // Convert back to canonical JSON without HMAC field
-    let canonical = serde_json::to_string(&token).map_err(|_| "Failed to serialize canonical payload")?;
-    
+    let canonical =
+        serde_json::to_string(&token).map_err(|_| "Failed to serialize canonical payload")?;
+
     if !hmac::verify_hmac(&canonical, hmac_key, &expected_hmac) {
         return Err("Invalid HMAC");
     }
-    
+
     // Restore HMAC if needed later, but we authenticated the contents
     token.hmac = Some(expected_hmac);
 
