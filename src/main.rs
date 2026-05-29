@@ -1,15 +1,15 @@
 use clap::Parser;
+use metrics_exporter_prometheus::PrometheusBuilder;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use metrics_exporter_prometheus::PrometheusBuilder;
 
-use halimun_proxy::proxy::handler::{ProxyState, router as proxy_router};
-use halimun_proxy::token::replay_guard::ReplayGuard;
+use halimun_proxy::proxy::handler::{router as proxy_router, ProxyState};
 use halimun_proxy::security::rate_limiter::RateLimiter;
-use halimun_proxy::services::registry::ServiceRegistry;
-use halimun_proxy::services::logs::Logger;
 use halimun_proxy::services::admin::router as admin_router;
 use halimun_proxy::services::health::start_health_checker;
+use halimun_proxy::services::logs::Logger;
+use halimun_proxy::services::registry::ServiceRegistry;
+use halimun_proxy::token::replay_guard::ReplayGuard;
 
 #[derive(Parser, Debug)]
 #[command(name = "halimun-proxy")]
@@ -55,7 +55,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Setup Prometheus Telemetry
     let builder = PrometheusBuilder::new();
     builder
-        .with_http_listener(SocketAddr::from(([0, 0, 0, 0], app_config.server.telemetry_port)))
+        .with_http_listener(SocketAddr::from((
+            [0, 0, 0, 0],
+            app_config.server.telemetry_port,
+        )))
         .install()
         .expect("failed to install Prometheus recorder");
 
@@ -81,16 +84,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🚀 Halimun Proxy started on {}", proxy_addr);
     println!("🛠️ Admin API started on {}", admin_addr);
-    println!("📊 Telemetry (Prometheus) on port {}", app_config.server.telemetry_port);
+    println!(
+        "📊 Telemetry (Prometheus) on port {}",
+        app_config.server.telemetry_port
+    );
 
     let proxy_handle = axum::serve(
         tokio::net::TcpListener::bind(proxy_addr).await?,
-        main_router.into_make_service()
+        main_router.into_make_service(),
     );
 
     let admin_handle = axum::serve(
         tokio::net::TcpListener::bind(admin_addr).await?,
-        admin_api_router.into_make_service()
+        admin_api_router.into_make_service(),
     );
 
     // Wait for both servers
