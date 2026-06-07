@@ -201,6 +201,22 @@ Silakan lihat implementasi Klien (_Frontend & Backend Integration SDKs_) Python,
 
 ---
 
+## 📚 Referensi & Inspirasi
+
+Halimun dibangun dengan ide dan inspirasi yang diambil dari proyek-proyek open-source luar biasa berikut ini:
+
+| Proyek                                                    | Deskripsi                                                                                   | Stack         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------- |
+| [Latebra](https://github.com/exphert/Latebra)             | Proxy terenkripsi dengan AES-256-CBC, HMAC-SHA256, dan pencegahan serangan replay via nonce | PHP / Laravel |
+| [rathole](https://github.com/rathole-org/rathole)         | Reverse proxy berkinerja tinggi untuk NAT traversal dengan enkripsi Noise Protocol & TLS    | Rust          |
+| [frp](https://github.com/fatedier/frp)                    | Fast reverse proxy mendukung TCP/UDP/HTTP/HTTPS dengan enkripsi TLS                         | Go            |
+| [Ghostunnel](https://github.com/ghostunnel/ghostunnel)    | Proxy TLS sederhana dengan autentikasi mutual TLS (mTLS) untuk mengamankan backend non-TLS  | Go            |
+| [rustunnel](https://github.com/joaoh82/rustunnel)         | Server tunnel self-hosted yang mengekspos layanan lokal via WebSocket terenkripsi TLS       | Rust          |
+| [Proxytunnel](https://github.com/proxytunnel/proxytunnel) | Tool klasik untuk tunneling koneksi melalui proxy HTTP(S) dengan SSL/TLS                    | C             |
+| [RustCrypto](https://github.com/RustCrypto)               | Ekosistem primitif kriptografi Rust yang diaudit komunitas (AES, HMAC, SHA2, dll.)          | Rust          |
+
+---
+
 ## 📄 Lisensi
 Proyek ini bersifat *Open Source* di bawah lisensi **MIT License**.
 Lihat berkas [LICENSE](LICENSE) atau kunjungi [Muhammad-Ikhwan-Fathulloh/Halimun-Proxy](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy) untuk detail lebih lanjut.

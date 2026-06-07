@@ -223,6 +223,22 @@ For native Frontend and Backend code implementation patterns, review the full se
 
 ---
 
-## 📄 License
+## � References & Inspiration
+
+Halimun was built with ideas and inspiration drawn from the following outstanding open-source projects:
+
+| Project                                                   | Description                                                                                    | Stack         |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------- |
+| [Latebra](https://github.com/exphert/Latebra)             | Encrypted request proxy with AES-256-CBC, HMAC-SHA256, and replay attack prevention via nonces | PHP / Laravel |
+| [rathole](https://github.com/rathole-org/rathole)         | High-performance reverse proxy for NAT traversal with Noise Protocol & TLS encryption          | Rust          |
+| [frp](https://github.com/fatedier/frp)                    | Fast reverse proxy supporting TCP/UDP/HTTP/HTTPS with TLS encryption                           | Go            |
+| [Ghostunnel](https://github.com/ghostunnel/ghostunnel)    | Simple TLS proxy with mutual TLS (mTLS) authentication for securing non-TLS backends           | Go            |
+| [rustunnel](https://github.com/joaoh82/rustunnel)         | Self-hosted tunnel server exposing local services via TLS-encrypted WebSockets                 | Rust          |
+| [Proxytunnel](https://github.com/proxytunnel/proxytunnel) | Classic tool for tunneling connections through HTTP(S) proxies with SSL/TLS                    | C             |
+| [RustCrypto](https://github.com/RustCrypto)               | Community-audited cryptographic primitives ecosystem (AES, HMAC, SHA2, etc.)                   | Rust          |
+
+---
+
+## �📄 License
 This project is open-sourced under the **MIT License**.
 See the [LICENSE](LICENSE) file or visit [Muhammad-Ikhwan-Fathulloh/Halimun-Proxy](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy) for more details.

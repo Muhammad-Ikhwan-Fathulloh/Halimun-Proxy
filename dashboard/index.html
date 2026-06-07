@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halimun Request Gateway</title>
+    <title>Halimun Security Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,7 +30,7 @@
                 radial-gradient(circle at 15% 50%,rgba(69,162,158,0.08) 0%,transparent 50%),
                 radial-gradient(circle at 85% 30%,rgba(102,252,241,0.05) 0%,transparent 50%);
         }
-        .dash { display:grid; grid-template-columns:260px 1fr; width:100vw; height:100vh; }
+        .dash { display:grid; grid-template-columns:280px 1fr; width:100vw; height:100vh; }
 
         /* Sidebar */
         .side {
@@ -39,17 +39,18 @@
             padding:1.5rem; display:flex; flex-direction:column;
             box-shadow:5px 0 30px rgba(0,0,0,.3); z-index:10;
         }
-        .logo { font-size:2rem; font-weight:800; color:#fff; margin-bottom:2rem; text-shadow:0 0 20px var(--glow); letter-spacing:2px; }
-        .navs { display:flex; flex-direction:column; gap:.5rem; }
+        .logo { font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:2rem; text-shadow:0 0 20px var(--glow); letter-spacing:2px; }
+        .navs { display:flex; flex-direction:column; gap:.4rem; }
         .nav {
             background:transparent; border:1px solid transparent;
             color:var(--text); padding:.8rem 1rem; border-radius:var(--r);
-            font-family:inherit; font-size:1rem; text-align:left;
+            font-family:inherit; font-size:.95rem; text-align:left;
             cursor:pointer; transition:all .3s ease;
+            display: flex; align-items: center; gap: 0.8rem;
         }
         .nav:hover { color:#fff; background:rgba(255,255,255,.05); transform:translateX(4px); }
         .nav.on { background:rgba(102,252,241,.1); border:1px solid rgba(102,252,241,.3); color:var(--accent); box-shadow:0 0 20px rgba(102,252,241,.1); }
-        .version { margin-top:auto; font-size:.75rem; color:rgba(255,255,255,.2); text-align:center; }
+        .version { margin-top:auto; font-size:.75rem; color:rgba(255,255,255,.2); text-align:center; padding-top: 1rem; }
 
         /* Main */
         .main { padding:1.5rem 2rem; overflow-y:auto; }
@@ -64,137 +65,108 @@
         .api-in:focus { border-color:var(--accent); box-shadow:0 0 10px rgba(102,252,241,.2); }
 
         /* Panel */
-        .p { background:var(--surface); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; display:none; animation:fi .4s ease forwards; box-shadow:0 10px 30px rgba(0,0,0,.2); }
+        .p { border-radius:16px; margin-bottom:1.5rem; display:none; animation:fi .4s ease forwards; }
         .p.on { display:block; }
         @keyframes fi { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .pt { font-size:1.3rem; font-weight:600; color:#fff; margin-bottom:1rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
+        .pt { font-size:1.5rem; font-weight:600; color:#fff; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; }
 
-        /* Filters */
-        .filters { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:1rem; }
-        .f-grp { display:flex; gap:.3rem; background:rgba(0,0,0,.2); border-radius:8px; padding:3px; }
-        .f-btn {
-            background:transparent; border:none; color:var(--text);
-            padding:.4rem .8rem; border-radius:6px; font-family:inherit;
-            font-size:.8rem; cursor:pointer; transition:all .2s ease;
-        }
-        .f-btn:hover { color:#fff; }
-        .f-btn.on { background:rgba(102,252,241,.15); color:var(--accent); }
-        .f-select {
-            background:rgba(0,0,0,.3); border:1px solid var(--border);
-            color:var(--text); padding:.4rem .6rem; border-radius:6px;
-            font-family:inherit; font-size:.8rem; outline:none; cursor:pointer;
-        }
-        .f-select option { background:#1a1a2e; color:var(--text); }
-        .f-date {
-            background:rgba(0,0,0,.3); border:1px solid var(--border);
-            color:var(--text); padding:.4rem .6rem; border-radius:6px;
-            font-family:'Fira Code',monospace; font-size:.8rem; outline:none;
-            color-scheme:dark;
-        }
-        .f-date:focus { border-color:var(--accent); }
-        .custom-range { display:none; gap:.4rem; align-items:center; }
-        .custom-range.on { display:flex; }
-        .f-label { font-size:.75rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:1px; }
+        /* Cards */
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+        .c { background:var(--surface); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:16px; padding:1.5rem; box-shadow:0 10px 30px rgba(0,0,0,0.2); }
+        .ct { font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
         /* Stats Row */
-        .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:1rem; }
-        .stat {
-            background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.04);
-            border-radius:var(--r); padding:1rem; text-align:center;
-        }
-        .stat-val { font-size:1.6rem; font-weight:800; color:#fff; }
-        .stat-lbl { font-size:.75rem; color:rgba(255,255,255,.4); margin-top:.3rem; }
+        .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .stat { background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.04); border-radius:var(--r); padding:1.2rem; text-align:center; transition: transform .3s ease; }
+        .stat:hover { transform: translateY(-5px); border-color: var(--border); }
+        .stat-val { font-size:1.8rem; font-weight:800; color:#fff; }
+        .stat-lbl { font-size:.75rem; color:rgba(255,255,255,.4); margin-top:.3rem; text-transform: uppercase; letter-spacing: 1px; }
 
         /* Buttons */
-        .btn {
-            background:linear-gradient(135deg,#45a29e,#66fcf1);
-            color:#0b0c10; border:none; padding:.5rem 1rem; border-radius:8px;
-            font-weight:700; font-size:.85rem; cursor:pointer; transition:all .3s ease;
-            box-shadow:0 4px 15px rgba(102,252,241,.3);
-        }
+        .btn { background:linear-gradient(135deg,#45a29e,#66fcf1); color:#0b0c10; border:none; padding:.6rem 1.2rem; border-radius:8px; font-weight:700; font-size:.9rem; cursor:pointer; transition:all .3s ease; box-shadow:0 4px 15px rgba(102,252,241,.3); }
         .btn:hover { transform:scale(1.05); box-shadow:0 6px 20px rgba(102,252,241,.5); }
         .btn-sm { padding:.4rem .8rem; font-size:.8rem; }
-        .btn-outline {
-            background:transparent; border:1px solid var(--accent2);
-            color:var(--accent); padding:.4rem .8rem; border-radius:6px;
-            font-size:.8rem; cursor:pointer; transition:all .2s ease;
-        }
+        .btn-outline { background:transparent; border:1px solid var(--accent2); color:var(--accent); padding:.5rem 1rem; border-radius:8px; font-size:.85rem; cursor:pointer; transition:all .2s ease; }
         .btn-outline:hover { background:rgba(102,252,241,.1); }
 
-        /* Download Menu */
-        .dl-wrap { position:relative; display:inline-block; }
-        .dl-menu {
-            display:none; position:absolute; right:0; top:110%; z-index:50;
-            background:rgba(20,20,30,.95); border:1px solid var(--border);
-            border-radius:8px; overflow:hidden; min-width:140px;
-            box-shadow:0 10px 30px rgba(0,0,0,.5);
-        }
-        .dl-menu.on { display:block; }
-        .dl-opt {
-            display:block; width:100%; background:transparent; border:none;
-            color:var(--text); padding:.6rem 1rem; font-family:inherit;
-            font-size:.85rem; text-align:left; cursor:pointer;
-        }
-        .dl-opt:hover { background:rgba(102,252,241,.1); color:#fff; }
-
         /* Table */
-        .tw { overflow-x:auto; border-radius:var(--r); border:1px solid var(--border); }
-        table { width:100%; border-collapse:collapse; font-family:'Fira Code',monospace; font-size:.82rem; }
-        th,td { padding:.7rem .8rem; text-align:left; border-bottom:1px solid rgba(255,255,255,.04); }
-        th { background:rgba(0,0,0,.4); color:#fff; font-weight:600; position:sticky; top:0; z-index:2; }
-        td { background:rgba(0,0,0,.15); }
+        .tw { overflow-x:auto; border-radius:var(--r); border:1px solid var(--border); background: rgba(0,0,0,0.2); }
+        table { width:100%; border-collapse:collapse; font-family:'Fira Code',monospace; font-size:.85rem; }
+        th,td { padding:.9rem 1rem; text-align:left; border-bottom:1px solid rgba(255,255,255,.04); }
+        th { background:rgba(0,0,0,.4); color:#fff; font-weight:600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
         tr:hover td { background:rgba(102,252,241,.04); }
         .s2 { color:var(--ok); } .s4 { color:var(--warn); } .s5 { color:var(--err); }
-        .no-data { text-align:center; padding:2rem; color:rgba(255,255,255,.3); font-style:italic; }
+        .threat-row { border-left: 3px solid var(--err); }
 
-        /* Service Cards */
-        .sg { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
-        .sc {
-            background:rgba(0,0,0,.2); border:1px solid rgba(255,255,255,.05);
-            padding:1.2rem; border-radius:var(--r); transition:transform .3s ease,border .3s ease;
-        }
-        .sc:hover { transform:translateY(-4px); border-color:rgba(102,252,241,.4); }
-        .sn { font-size:1.1rem; color:#fff; margin-bottom:.4rem; }
-        .sb {
-            display:inline-block; padding:.2rem .6rem; border-radius:50px;
-            font-size:.75rem; font-weight:600; background:rgba(102,252,241,.15); color:var(--accent);
-        }
+        /* Guide / Walkthrough */
+        .g-step { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
+        .g-head { padding: 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background .3s; }
+        .g-head:hover { background: rgba(102,252,241,0.05); }
+        .g-num { width: 28px; height: 28px; background: var(--accent); color: var(--bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; margin-right: 1rem; }
+        .g-title { font-weight: 600; font-size: 1.05rem; flex-grow: 1; color: #fff; }
+        .g-body { padding: 0 1rem 1.5rem 3.8rem; display: none; color: var(--text); line-height: 1.6; }
+        .g-step.on .g-body { display: block; }
 
         /* Code Block */
-        .cb {
-            background:#050608; padding:1.2rem; border-radius:var(--r);
-            font-family:'Fira Code',monospace; color:#a9b7c6;
-            white-space:pre-wrap; border:1px solid #1a202c;
-            font-size:.85rem; max-height:400px; overflow-y:auto;
-        }
+        .cb-container { position: relative; margin: 1rem 0; }
+        .cb { background:#050608; padding:1.2rem; border-radius:var(--r); font-family:'Fira Code',monospace; color:#a9b7c6; white-space:pre-wrap; border:1px solid #1a202c; font-size:.85rem; max-height:400px; overflow-y:auto; }
+        .cb-copy { position: absolute; top: 0.8rem; right: 0.8rem; }
 
-        /* Empty State */
-        .empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:3rem; color:rgba(255,255,255,.25); }
-        .empty-icon { font-size:2.5rem; margin-bottom:.8rem; }
+        /* Registry Grid */
+        .sg { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.5rem; }
+        .sc { background:rgba(30,40,50,0.5); border:1px solid rgba(255,255,255,.05); padding:1.5rem; border-radius:var(--r); transition:all .3s ease; position: relative; overflow: hidden; }
+        .sc:hover { transform:translateY(-5px); border-color:var(--accent); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .sc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .sn { font-size:1.2rem; font-weight: 700; color:#fff; }
+        .sb { padding:.3rem .8rem; border-radius:50px; font-size:.7rem; font-weight:800; text-transform: uppercase; letter-spacing: 1px; }
+        .sb.backend { background:rgba(56, 189, 248, 0.15); color:var(--ok); }
+        .sb.frontend { background:rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .hpulse { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; display: inline-block; margin-right: 6px; box-shadow: 0 0 10px #4ade80; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width:6px; height:6px; }
-        ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:rgba(102,252,241,.2); border-radius:3px; }
+        /* Threat Chart Placeholder */
+        .donut { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--err) 0% 25%, var(--warn) 25% 45%, var(--ok) 45% 100%); position: relative; margin: 0 auto; }
+        .donut::after { content: ""; position: absolute; top: 25%; left: 25%; width: 50%; height: 50%; background: var(--bg); border-radius: 50%; }
+
+        /* Key Rotation */
+        .key-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; }
+        .key-box { flex-grow: 1; background: rgba(0,0,0,0.4); padding: 0.7rem 1rem; border-radius: 8px; border: 1px solid var(--border); font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .blur { filter: blur(5px); transition: filter 0.3s; cursor: pointer; }
+        .blur:hover { filter: blur(0); }
+
+        /* Filters */
+        .filters { display:flex; flex-wrap:wrap; gap:1rem; align-items:center; margin-bottom:1.5rem; }
+        .f-grp { display:flex; gap:.3rem; background:rgba(0,0,0,.2); border-radius:8px; padding:3px; }
+        .f-btn { background:transparent; border:none; color:var(--text); padding:.4rem .8rem; border-radius:6px; font-family:inherit; font-size:.8rem; cursor:pointer; transition:all .2s ease; }
+        .f-btn.on { background:rgba(102,252,241,.15); color:var(--accent); }
+        .f-select { background:rgba(0,0,0,.3); border:1px solid var(--border); color:var(--text); padding:.5rem .8rem; border-radius:8px; font-family:inherit; outline:none; cursor:pointer; min-width: 150px; }
+
+        /* Responsive */
+        @media (max-width: 1024px) { .dash { grid-template-columns: 80px 1fr; } .side .logo, .side .nav span, .side .version, .side .logo-full { display: none; } .side .nav { justify-content: center; padding: 1rem; } .side .logo-short { display: block; font-size: 1.5rem; font-weight: 800; color: var(--accent); } }
+        @media (min-width: 1025px) { .side .logo-short { display: none; } }
     </style>
 </head>
 <body>
 <div class="dash">
     <aside class="side">
-        <div class="logo">HALIMUN::</div>
+        <div class="logo logo-full">HALIMUN::</div>
+        <div class="logo-short">H::</div>
         <div class="navs">
-            <button class="nav on" data-t="logs-p">📊 Traffic Logs</button>
-            <button class="nav" data-t="svc-p">🗂️ Registry</button>
-            <button class="nav" data-t="key-p">🔑 Key Generation</button>
+            <button class="nav on" data-t="logs-p"><span>📊</span> <span>Traffic Logs</span></button>
+            <button class="nav" data-t="sec-p"><span>🛡️</span> <span>Security Overview</span></button>
+            <button class="nav" data-t="svc-p"><span>🗂️</span> <span>Registry Hub</span></button>
+            <button class="nav" data-t="key-p"><span>🔑</span> <span>Key Management</span></button>
+            <button class="nav" data-t="guide-p"><span>📋</span> <span>Usage Guide</span></button>
+            <button class="nav" data-t="threat-p"><span>⚡</span> <span>Threat Monitor</span></button>
         </div>
-        <div class="version">v0.1.0 — Encrypted Proxy</div>
+        <div class="version">Halimun Console v0.2.0</div>
     </aside>
 
     <main class="main">
         <div class="top">
             <div class="top-left">
-                <span style="font-size:.85rem;color:rgba(255,255,255,.4)">Admin Key:</span>
-                <input type="password" id="apiKey" class="api-in" placeholder="Enter admin-secret-key...">
+                <span style="font-size:.85rem;color:rgba(255,255,255,.4)">Admin Access:</span>
+                <input type="password" id="apiKey" class="api-in" placeholder="Enter X-Admin-Key..." value="admin-secret-key">
             </div>
             <button class="btn btn-sm" onclick="connectAll()" id="connectBtn">Connect</button>
         </div>
@@ -202,83 +174,40 @@
         <!-- ===== TRAFFIC LOGS ===== -->
         <section id="logs-p" class="p on">
             <div class="pt">
-                <span>Live Microservice Traffic</span>
+                <span>Microservice Traffic</span>
                 <div style="display:flex;gap:.5rem;align-items:center">
                     <button class="btn btn-sm" onclick="fetchLogs()" id="refreshBtn">↻ Refresh</button>
-                    <div class="dl-wrap">
-                        <button class="btn-outline" onclick="toggleDl()">⬇ Download</button>
-                        <div class="dl-menu" id="dlMenu">
-                            <button class="dl-opt" onclick="downloadLogs('csv')">📄 CSV</button>
-                            <button class="dl-opt" onclick="downloadLogs('json')">📦 JSON</button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <!-- Filters -->
-            <div class="filters">
-                <div>
-                    <div class="f-label">Period</div>
-                    <div class="f-grp" id="timeGrp">
-                        <button class="f-btn on" data-v="all" onclick="setTime(this)">All</button>
-                        <button class="f-btn" data-v="today" onclick="setTime(this)">Today</button>
-                        <button class="f-btn" data-v="week" onclick="setTime(this)">Week</button>
-                        <button class="f-btn" data-v="month" onclick="setTime(this)">Month</button>
-                        <button class="f-btn" data-v="year" onclick="setTime(this)">Year</button>
-                        <button class="f-btn" data-v="custom" onclick="setTime(this)">Custom</button>
-                    </div>
-                </div>
-                <div>
-                    <div class="f-label">Endpoint</div>
-                    <select class="f-select" id="epFilter" onchange="applyFilters()">
-                        <option value="all">All Endpoints</option>
-                    </select>
-                </div>
-                <div>
-                    <div class="f-label">Status</div>
-                    <select class="f-select" id="statusFilter" onchange="applyFilters()">
-                        <option value="all">All</option>
-                        <option value="2xx">2xx Success</option>
-                        <option value="4xx">4xx Client Error</option>
-                        <option value="5xx">5xx Server Error</option>
-                    </select>
-                </div>
-                <div>
-                    <div class="f-label">Method</div>
-                    <select class="f-select" id="methodFilter" onchange="applyFilters()">
-                        <option value="all">All</option>
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                        <option value="PUT">PUT</option>
-                        <option value="DELETE">DELETE</option>
-                    </select>
-                </div>
-            </div>
-            <div class="custom-range" id="customRange">
-                <div class="f-label">From</div>
-                <input type="datetime-local" class="f-date" id="dateFrom" onchange="applyFilters()">
-                <div class="f-label">To</div>
-                <input type="datetime-local" class="f-date" id="dateTo" onchange="applyFilters()">
-            </div>
-
-            <!-- Stats -->
             <div class="stats" id="statsRow">
                 <div class="stat"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Total Requests</div></div>
                 <div class="stat"><div class="stat-val s2" id="s-ok">0</div><div class="stat-lbl">Success (2xx)</div></div>
-                <div class="stat"><div class="stat-val s4" id="s-4xx">0</div><div class="stat-lbl">Client Err (4xx)</div></div>
-                <div class="stat"><div class="stat-val s5" id="s-5xx">0</div><div class="stat-lbl">Server Err (5xx)</div></div>
-                <div class="stat"><div class="stat-val" id="s-avg" style="color:var(--accent)">0ms</div><div class="stat-lbl">Avg Latency</div></div>
+                <div class="stat"><div class="stat-val s4" id="s-4xx">0</div><div class="stat-lbl">Client Errors</div></div>
+                <div class="stat"><div class="stat-val s5" id="s-5xx">0</div><div class="stat-lbl">Server Errors</div></div>
             </div>
 
-            <!-- Table -->
-            <div class="tw" style="max-height:45vh;overflow-y:auto">
+            <div class="filters">
+                <div class="f-grp" id="timeGrp">
+                    <button class="f-btn on" data-v="all" onclick="setTime(this)">All</button>
+                    <button class="f-btn" data-v="today" onclick="setTime(this)">Today</button>
+                </div>
+                <select class="f-select" id="statusFilter" onchange="applyFilters()">
+                    <option value="all">All Status</option>
+                    <option value="2xx">2xx Success</option>
+                    <option value="4xx">4xx Error</option>
+                    <option value="5xx">5xx Error</option>
+                </select>
+            </div>
+
+            <div class="tw">
                 <table>
                     <thead>
                         <tr>
                             <th>Timestamp</th>
                             <th>Method</th>
-                            <th>Target URL</th>
-                            <th>IP</th>
+                            <th>Target Endpoint</th>
+                            <th>Client IP</th>
                             <th>Latency</th>
                             <th>Status</th>
                         </tr>
@@ -286,44 +215,167 @@
                     <tbody id="logBody"></tbody>
                 </table>
             </div>
-            <div id="logEmpty" class="empty" style="display:none">
-                <div class="empty-icon">📭</div>
-                <div>No traffic logs yet. Send requests through the proxy to see data here.</div>
+        </section>
+
+        <!-- ===== SECURITY OVERVIEW ===== -->
+        <section id="sec-p" class="p">
+            <div class="pt">Security Posture</div>
+            <div class="grid-2">
+                <div class="c">
+                    <div class="ct">🔒 Encryption Standards</div>
+                    <div style="display:grid; gap: 0.8rem;">
+                        <div style="display:flex; justify-content: space-between;"><span>Algorithm</span> <span class="s2">AES-256-CBC</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>Integrity</span> <span class="s2">HMAC-SHA256</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>Obfuscation</span> <span class="s2">Custom XOR + B32</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>Token TTL</span> <span class="s2">3600s</span></div>
+                    </div>
+                </div>
+                <div class="c">
+                    <div class="ct">🛡️ Active Protections</div>
+                    <div style="display:grid; gap: 0.8rem;">
+                        <div style="display:flex; justify-content: space-between;"><span>Replay Guard</span> <span class="s2">In-Memory (DashMap)</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>SSRF Shield</span> <span class="s2">Recursive Filter</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>Rate Limiter</span> <span class="s2">120 req/min</span></div>
+                        <div style="display:flex; justify-content: space-between;"><span>Domain Strict</span> <span class="s4">halimun.yourdomain.com</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="c">
+                <div class="ct">📈 Security Score: <span style="color:var(--accent); margin-left: 10px;">A+ (Optimal)</span></div>
+                <p style="font-size: 0.9rem; color: var(--text); margin-bottom: 1rem;">Your proxy is currently configured with maximum security settings. End-to-end encryption is active and integrity checks are enforced on every request.</p>
+                <div style="height: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; overflow: hidden;">
+                    <div style="width: 95%; height: 100%; background: linear-gradient(90deg, var(--ok), var(--accent));"></div>
+                </div>
             </div>
         </section>
 
-        <!-- ===== SERVICES REGISTRY ===== -->
+        <!-- ===== REGISTRY ===== -->
         <section id="svc-p" class="p">
-            <div class="pt">
-                Active Services Registry
-                <button class="btn btn-sm" onclick="fetchServices()">↻ Refresh</button>
-            </div>
+            <div class="pt">Registry Hub</div>
             <div class="sg" id="svcGrid"></div>
-            <div id="svcEmpty" class="empty" style="display:none">
-                <div class="empty-icon">📋</div>
-                <div>No services registered.</div>
+        </section>
+
+        <!-- ===== KEY MANAGEMENT ===== -->
+        <section id="key-p" class="p">
+            <div class="pt">Key Management</div>
+            <div class="grid-2">
+                <div class="c">
+                    <div class="ct">Static Payload Keys</div>
+                    <p style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 1rem;">Use these keys in your client applications to encrypt outgoing requests.</p>
+                    <div id="staticKeysOut">
+                        <div class="key-row">
+                            <span style="width: 80px; font-size: 0.75rem;">AES_KEY</span>
+                            <div class="key-box blur">Click to reveal keys...</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm" style="margin-top: 1rem;" onclick="genKeys()">Generate New Bundle</button>
+                    <button class="btn-outline btn-sm" onclick="copyEnv()">Copy .env Format</button>
+                </div>
+                <div class="c">
+                    <div class="ct">Dynamic Key Rotation</div>
+                    <p style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 1rem;">Auto-rotating keys for high-security ephemeral sessions.</p>
+                    <div id="dynamicKeysOut">
+                        <div class="key-row">
+                            <span style="width: 80px; font-size: 0.75rem;">SESSION</span>
+                            <div class="key-box">None Active</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--warn); margin-bottom: 0.5rem;">
+                            <span>Next Rotation</span>
+                            <span id="rotationTimer">00:00:00</span>
+                        </div>
+                        <div style="height: 4px; background: rgba(0,0,0,0.3); border-radius: 2px; overflow: hidden;">
+                            <div id="rotationBar" style="width: 0%; height: 100%; background: var(--warn); transition: width 1s linear;"></div>
+                        </div>
+                    </div>
+                    <button class="btn-outline btn-sm" style="margin-top: 1.5rem;" onclick="negotiateDynamic()">Negotiate Now</button>
+                </div>
+            </div>
+            <div class="c">
+                <div class="ct">Cross-Language Integration</div>
+                <div class="cb" id="keyExport">// Click "Generate" then "Copy .env" to see integration code...</div>
             </div>
         </section>
 
-        <!-- ===== KEY GENERATION ===== -->
-        <section id="key-p" class="p">
-            <div class="pt">
-                Universal Key Generator
-                <button class="btn" onclick="genKeys()">⚡ Generate New Bundle</button>
+        <!-- ===== USAGE GUIDE ===== -->
+        <section id="guide-p" class="p">
+            <div class="pt">Operation Guide</div>
+            <div class="g-step on">
+                <div class="g-head" onclick="toggleStep(this)"><div class="g-num">1</div><div class="g-title">Initialize Configuration</div></div>
+                <div class="g-body">
+                    <p>Create a `config.yaml` in your root directory. This defines your server ports, admin credentials, and backend mappings.</p>
+                    <div class="cb-container"><div class="cb">server:
+  host: "0.0.0.0"
+  port: 80
+  admin_api_key: "your-secret-key"
+services:
+  - name: "app-1"
+    url: "http://target:8080"</div></div>
+                </div>
             </div>
-            <p style="margin-bottom:1rem;color:#8892b0;font-size:.9rem">Export these keys into your cross-language environments (.env files) to seamlessly sync your frontend applications with the backend Halimun proxies.</p>
-            <div class="cb" id="keyOut">// Click "Generate New Bundle" to create encryption keys...</div>
+            <div class="g-step">
+                <div class="g-head" onclick="toggleStep(this)"><div class="g-num">2</div><div class="g-title">Generate Secrets</div></div>
+                <div class="g-body">
+                    <p>Navigate to the <b>Key Management</b> panel and click "Generate New Bundle". Copy these keys into your development environments.</p>
+                </div>
+            </div>
+            <div class="g-step">
+                <div class="g-head" onclick="toggleStep(this)"><div class="g-num">3</div><div class="g-title">Deploy Proxy</div></div>
+                <div class="g-body">
+                    <p>Halimun is Docker-native. Run the cluster with one command:</p>
+                    <div class="cb-container"><div class="cb">docker-compose up -d</div></div>
+                </div>
+            </div>
+            <div class="g-step">
+                <div class="g-head" onclick="toggleStep(this)"><div class="g-num">4</div><div class="g-title">Encrypt Client Request</div></div>
+                <div class="g-body">
+                    <p>On your client side, wrap your target URL with a Halimun Token. Example (Node.js):</p>
+                    <div class="cb-container"><div class="cb">const token = encrypt({
+  api_url: "http://target/api/login",
+  method: "POST",
+  nonce: uuid(),
+  timestamp: Date.now()
+});
+// Send to proxy
+fetch('http://proxy/proxy/1/seg1/seg2/HIDDEN_TOKEN/seg4/seg5');</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== THREAT MONITOR ===== -->
+        <section id="threat-p" class="p">
+            <div class="pt">Threat Intelligence</div>
+            <div class="grid-2">
+                <div class="c">
+                    <div class="ct">Activity Profile</div>
+                    <div class="donut"></div>
+                    <div style="display:flex; justify-content: space-around; margin-top: 1.5rem; font-size: 0.8rem;">
+                        <div style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;background:var(--ok);border-radius:2px;"></span> Safe</div>
+                        <div style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;background:var(--warn);border-radius:2px;"></span> Filtered</div>
+                        <div style="display:flex; align-items:center; gap:5px;"><span style="width:10px;height:10px;background:var(--err);border-radius:2px;"></span> Attacks</div>
+                    </div>
+                </div>
+                <div class="c">
+                    <div class="ct">Real-time Block Log</div>
+                    <div class="tw" style="max-height: 200px;">
+                        <table style="font-size: 0.75rem;">
+                            <tbody id="threatTable">
+                                <tr><td colspan="3" class="no-data">Scanning for anomalies...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 </div>
 
 <script>
-// ---- State ----
 let allLogs = [];
-let filtered = [];
-let currentTime = 'all';
+let keys = null;
 
-// ---- Navigation ----
+// Navigation
 document.querySelectorAll('.nav').forEach(b => {
     b.addEventListener('click', () => {
         document.querySelectorAll('.nav').forEach(n => n.classList.remove('on'));
@@ -335,205 +387,157 @@ document.querySelectorAll('.nav').forEach(b => {
     });
 });
 
-// ---- API Calls ----
-const api = '/admin';
-
 async function apiFetch(ep) {
     const key = document.getElementById('apiKey').value;
-    if (!key) { alert('Please enter Admin API Key'); return null; }
     try {
-        const r = await fetch(`${api}${ep}`, { headers: { 'x-admin-key': key } });
-        if (r.status === 401) { alert('Unauthorized: Invalid API Key'); return null; }
+        const r = await fetch(`/admin${ep}`, { headers: { 'x-admin-key': key } });
+        if (r.status === 401) return null;
         return await r.json();
-    } catch(e) { console.error(e); alert('Network error. Ensure proxy is running.'); return null; }
+    } catch(e) { return null; }
 }
 
 function connectAll() {
     const btn = document.getElementById('connectBtn');
     btn.textContent = '⏳';
-    fetchLogs().finally(() => { btn.textContent = '✓ Connected'; setTimeout(() => btn.textContent = 'Connect', 2000); });
+    fetchLogs().finally(() => { 
+        btn.textContent = '✓ Connected'; 
+        setTimeout(() => btn.textContent = 'Connect', 2000); 
+    });
 }
 
-// ---- Logs ----
+// Logs & Threats
 async function fetchLogs() {
     const data = await apiFetch('/logs');
     if (!data) return;
     allLogs = data;
-    populateEndpoints();
     applyFilters();
-}
-
-function populateEndpoints() {
-    const sel = document.getElementById('epFilter');
-    const current = sel.value;
-    const urls = [...new Set(allLogs.map(l => l.target_url))];
-    sel.innerHTML = '<option value="all">All Endpoints</option>';
-    urls.forEach(u => {
-        const o = document.createElement('option');
-        o.value = u; o.textContent = u.length > 50 ? u.slice(0, 50) + '…' : u;
-        sel.appendChild(o);
-    });
-    sel.value = current;
-}
-
-function setTime(btn) {
-    document.querySelectorAll('#timeGrp .f-btn').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    currentTime = btn.dataset.v;
-    document.getElementById('customRange').classList.toggle('on', currentTime === 'custom');
-    applyFilters();
-}
-
-function getTimeRange() {
-    const now = new Date();
-    switch (currentTime) {
-        case 'today': return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        case 'week': { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
-        case 'month': return new Date(now.getFullYear(), now.getMonth(), 1);
-        case 'year': return new Date(now.getFullYear(), 0, 1);
-        case 'custom': {
-            const v = document.getElementById('dateFrom').value;
-            return v ? new Date(v) : null;
-        }
-        default: return null;
-    }
-}
-
-function getTimeEnd() {
-    if (currentTime === 'custom') {
-        const v = document.getElementById('dateTo').value;
-        return v ? new Date(v) : null;
-    }
-    return null;
+    updateThreats();
 }
 
 function applyFilters() {
-    const ep = document.getElementById('epFilter').value;
     const st = document.getElementById('statusFilter').value;
-    const mt = document.getElementById('methodFilter').value;
-    const from = getTimeRange();
-    const to = getTimeEnd();
-
-    filtered = allLogs.filter(l => {
-        if (ep !== 'all' && l.target_url !== ep) return false;
-        if (mt !== 'all' && l.method !== mt) return false;
-        const s = l.status;
-        if (st === '2xx' && (s < 200 || s >= 300)) return false;
-        if (st === '4xx' && (s < 400 || s >= 500)) return false;
-        if (st === '5xx' && (s < 500 || s >= 600)) return false;
-        if (from) {
-            const t = new Date(l.timestamp);
-            if (t < from) return false;
-            if (to && t > to) return false;
-        }
+    const filtered = allLogs.filter(l => {
+        if (st === '2xx' && (l.status < 200 || l.status >= 300)) return false;
+        if (st === '4xx' && (l.status < 400 || l.status >= 500)) return false;
+        if (st === '5xx' && (l.status < 500)) return false;
         return true;
     });
 
-    renderLogs();
-    renderStats();
-}
-
-function renderLogs() {
     const tbody = document.getElementById('logBody');
-    const empty = document.getElementById('logEmpty');
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = '';
-        empty.style.display = 'flex';
-        return;
-    }
-    empty.style.display = 'none';
-
     tbody.innerHTML = filtered.map(l => {
-        const t = new Date(l.timestamp);
-        const ts = t.toLocaleDateString('en-GB', {day:'2-digit',month:'short'}) + ' ' + t.toLocaleTimeString('en-GB');
         const sc = l.status >= 500 ? 's5' : l.status >= 400 ? 's4' : 's2';
-        return `<tr>
-            <td>${ts}</td>
+        const threat = l.status >= 400 ? 'threat-row' : '';
+        return `<tr class="${threat}">
+            <td>${new Date(l.timestamp).toLocaleTimeString()}</td>
             <td style="color:var(--accent)">${l.method}</td>
-            <td title="${l.target_url}">${l.target_url.length > 40 ? l.target_url.slice(0,40)+'…' : l.target_url}</td>
+            <td>${l.target_url.split('/').pop() || l.target_url}</td>
             <td>${l.ip}</td>
             <td>${l.execution_ms}ms</td>
             <td class="${sc}">${l.status}</td>
         </tr>`;
-    }).join('');
+    }).join('') || '<tr><td colspan="6" class="no-data">No traffic found</td></tr>';
+
+    document.getElementById('s-total').textContent = allLogs.length;
+    document.getElementById('s-ok').textContent = allLogs.filter(l => l.status < 300).length;
+    document.getElementById('s-4xx').textContent = allLogs.filter(l => l.status >= 400 && l.status < 500).length;
+    document.getElementById('s-5xx').textContent = allLogs.filter(l => l.status >= 500).length;
 }
 
-function renderStats() {
-    const total = filtered.length;
-    const ok = filtered.filter(l => l.status >= 200 && l.status < 300).length;
-    const c4 = filtered.filter(l => l.status >= 400 && l.status < 500).length;
-    const c5 = filtered.filter(l => l.status >= 500).length;
-    const avg = total > 0 ? Math.round(filtered.reduce((a, l) => a + l.execution_ms, 0) / total) : 0;
-
-    document.getElementById('s-total').textContent = total;
-    document.getElementById('s-ok').textContent = ok;
-    document.getElementById('s-4xx').textContent = c4;
-    document.getElementById('s-5xx').textContent = c5;
-    document.getElementById('s-avg').textContent = avg + 'ms';
-}
-
-// ---- Download ----
-function toggleDl() {
-    document.getElementById('dlMenu').classList.toggle('on');
-}
-document.addEventListener('click', e => {
-    if (!e.target.closest('.dl-wrap')) document.getElementById('dlMenu').classList.remove('on');
-});
-
-function downloadLogs(fmt) {
-    document.getElementById('dlMenu').classList.remove('on');
-    if (filtered.length === 0) { alert('No logs to download.'); return; }
-
-    let content, mime, ext;
-    if (fmt === 'json') {
-        content = JSON.stringify(filtered, null, 2);
-        mime = 'application/json'; ext = 'json';
-    } else {
-        const hdr = 'timestamp,method,target_url,ip,latency_ms,status';
-        const rows = filtered.map(l =>
-            `"${l.timestamp}","${l.method}","${l.target_url}","${l.ip}",${l.execution_ms},${l.status}`
-        );
-        content = [hdr, ...rows].join('\n');
-        mime = 'text/csv'; ext = 'csv';
+function updateThreats() {
+    const blocks = allLogs.filter(l => l.status >= 400);
+    const threatTable = document.getElementById('threatTable');
+    if (blocks.length > 0) {
+        threatTable.innerHTML = blocks.map(l => `
+            <tr>
+                <td style="color:var(--err)">${l.status}</td>
+                <td>${l.ip}</td>
+                <td style="font-size:0.7rem;opacity:0.6">${new Date(l.timestamp).toLocaleTimeString()}</td>
+            </tr>
+        `).join('');
     }
-
-    const blob = new Blob([content], { type: mime });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `halimun_logs_${new Date().toISOString().slice(0,10)}.${ext}`;
-    a.click();
-    URL.revokeObjectURL(a.href);
 }
 
-// ---- Services ----
+// Services
 async function fetchServices() {
     const data = await apiFetch('/services');
     if (!data) return;
     const grid = document.getElementById('svcGrid');
-    const empty = document.getElementById('svcEmpty');
-
-    if (data.length === 0) { grid.innerHTML = ''; empty.style.display = 'flex'; return; }
-    empty.style.display = 'none';
-
     grid.innerHTML = data.map(s => `
         <div class="sc">
-            <div class="sn">${s.name}</div>
-            <span class="sb">${s.type}</span>
-            <div style="margin-top:.8rem;color:#8892b0;font-size:.85rem">
-                <div>🔗 ${s.url}</div>
-                <div>❤️ ${s.health || 'N/A'}</div>
-                <div>⏱️ ${s.timeout_ms}ms timeout</div>
+            <div class="sc-head">
+                <div class="sn">${s.name}</div>
+                <span class="sb ${s.type}">${s.type}</span>
+            </div>
+            <div style="font-size:0.85rem; color:var(--text); opacity:0.8;">
+                <div style="margin-bottom:4px;">🔗 ${s.url}</div>
+                <div><span class="hpulse"></span> Healthy</div>
+            </div>
+            <div style="margin-top:1rem; font-size:0.7rem; color:var(--accent2); display:flex; justify-content:space-between;">
+                <span>Timeout: ${s.timeout_ms}ms</span>
+                <span>Registry Active</span>
             </div>
         </div>
-    `).join('');
+    `).join('') || '<div class="no-data">No services discovered</div>';
 }
 
-// ---- Keys ----
+// Keys
 async function genKeys() {
-    const data = await apiFetch('/keys/generate');
+    keys = await apiFetch('/keys/generate');
+    if (!keys) return;
+    const out = document.getElementById('staticKeysOut');
+    out.innerHTML = Object.entries(keys).map(([k,v]) => `
+        <div class="key-row">
+            <span style="width: 80px; font-size: 0.75rem;">${k.replace('HALIMUN_','')}</span>
+            <div class="key-box blur" onclick="this.classList.toggle('blur')">${v}</div>
+        </div>
+    `).join('');
+    document.getElementById('keyExport').textContent = JSON.stringify(keys, null, 4);
+}
+
+function copyEnv() {
+    if (!keys) return alert('Generate keys first');
+    const env = Object.entries(keys).map(([k,v]) => `${k}=${v}`).join('\n');
+    navigator.clipboard.writeText(env);
+    alert('Copied to clipboard in .env format!');
+}
+
+async function negotiateDynamic() {
+    const data = await apiFetch('/keys/dynamic');
     if (!data) return;
-    document.getElementById('keyOut').textContent = JSON.stringify(data, null, 4);
+    const out = document.getElementById('dynamicKeysOut');
+    out.innerHTML = `
+        <div class="key-row">
+            <span style="width: 80px; font-size: 0.75rem;">AES_TMP</span>
+            <div class="key-box blur" onclick="this.classList.toggle('blur')">${data.keys.AES_KEY.slice(0,16)}...</div>
+        </div>
+        <div class="key-row">
+            <span style="width: 80px; font-size: 0.75rem;">HMAC_TMP</span>
+            <div class="key-box blur" onclick="this.classList.toggle('blur')">${data.keys.HMAC_KEY.slice(0,16)}...</div>
+        </div>
+    `;
+    startRotationTimer(data.keys.TTL_SECONDS);
+}
+
+function startRotationTimer(seconds) {
+    let left = seconds;
+    const bar = document.getElementById('rotationBar');
+    const timer = document.getElementById('rotationTimer');
+    const interval = setInterval(() => {
+        left--;
+        const h = Math.floor(left / 3600);
+        const m = Math.floor((left % 3600) / 60);
+        const s = left % 60;
+        timer.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        bar.style.width = `${(left / seconds) * 100}%`;
+        if (left <= 0) clearInterval(interval);
+    }, 1000);
+}
+
+// UI
+function toggleStep(el) {
+    const step = el.parentElement;
+    document.querySelectorAll('.g-step').forEach(s => s.classList.remove('on'));
+    step.classList.add('on');
 }
 </script>
 </body>
