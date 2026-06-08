@@ -24,7 +24,10 @@ cp .env.example .env
 
 # Gunakan Image Docker untuk melakukan compile dan mencetak kunci Kriptografi
 docker build -t halimun-proxy .
-docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
+# Linux/macOS
+docker run --rm halimun-proxy --keygen --format=env > .env
+# Windows (PowerShell)
+docker run --rm halimun-proxy --keygen --format=env | Out-File -Encoding ASCII .env
 ```
 Salin data di dalam `.env` yang baru terbuat tersebut dan masukkan ke dalam `config.yaml` Anda.
 

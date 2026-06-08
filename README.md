@@ -24,7 +24,10 @@ cp .env.example .env
 
 # Generate keys using Halimun's isolated keygen
 docker build -t halimun-proxy .
-docker run --rm halimun-proxy ./halimun-proxy --keygen --format=env > .env
+# Linux/macOS
+docker run --rm halimun-proxy --keygen --format=env > .env
+# Windows (PowerShell)
+docker run --rm halimun-proxy --keygen --format=env | Out-File -Encoding ASCII .env
 ```
 Copy your `.env` contents to `config.yaml` to configure target IPs and backend maps.
 

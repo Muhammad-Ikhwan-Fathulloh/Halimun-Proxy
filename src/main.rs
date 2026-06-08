@@ -76,7 +76,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let main_router = proxy_router(proxy_state);
-    let admin_api_router = admin_router(registry, app_config.server.admin_api_key.clone(), logger);
+    let admin_api_router = admin_router(
+        registry,
+        app_config.server.admin_api_key.clone(),
+        logger,
+        cli.config.clone(),
+    );
 
     // 6. Bind and Serve
     let proxy_addr = SocketAddr::from(([0, 0, 0, 0], app_config.server.port));

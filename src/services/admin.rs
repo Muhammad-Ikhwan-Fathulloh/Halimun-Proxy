@@ -1,11 +1,12 @@
 use crate::services::registry::ServiceRegistry;
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json},
-    routing::get,
+    routing::{delete, get, post},
     Router,
 };
+use crate::config::ServiceConfig;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -16,22 +17,70 @@ pub struct AdminState {
     pub registry: Arc<ServiceRegistry>,
     pub api_key: String,
     pub logger: Logger,
+    pub config_path: String,
 }
 
-pub fn router(registry: Arc<ServiceRegistry>, api_key: String, logger: Logger) -> Router {
+pub fn router(
+    registry: Arc<ServiceRegistry>,
+    api_key: String,
+    logger: Logger,
+    config_path: String,
+) -> Router {
     let state = AdminState {
         registry,
         api_key,
         logger,
+        config_path,
     };
 
     Router::new()
         .route("/services", get(list_services))
+        .route("/services", post(add_service))
+        .route("/services/:name", delete(delete_service))
         .route("/stats", get(get_stats))
         .route("/logs", get(get_logs))
         .route("/keys/generate", get(generate_keys_api))
         .route("/keys/dynamic", get(negotiate_dynamic_key))
         .with_state(state)
+}
+
+async fn add_service(
+    State(state): State<AdminState>,
+    headers: HeaderMap,
+    Json(config): Json<ServiceConfig>,
+) -> impl IntoResponse {
+    if !validate_admin(&headers, &state.api_key).await {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    state.registry.register_service(config);
+    let _ = persist_registry(&state.config_path, &state.registry).await;
+    
+    (StatusCode::CREATED, Json(json!({"status": "success"}))).into_response()
+}
+
+async fn delete_service(
+    State(state): State<AdminState>,
+    headers: HeaderMap,
+    Path(name): Path<String>,
+) -> impl IntoResponse {
+    if !validate_admin(&headers, &state.api_key).await {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    state.registry.remove_service(&name);
+    let _ = persist_registry(&state.config_path, &state.registry).await;
+
+    StatusCode::NO_CONTENT.into_response()
+}
+
+async fn persist_registry(path: &str, registry: &ServiceRegistry) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::config::load_config;
+    let mut config = load_config(path)?;
+    config.services = registry.all_services();
+    let yaml = serde_yaml::to_string(&config)?;
+    std::fs::write(path, yaml)?;
+    Ok(())
 }
 
 async fn validate_admin(headers: &HeaderMap, expected_key: &str) -> bool {
