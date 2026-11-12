@@ -1,25 +1,61 @@
+# ============================================================
+# Halimun Proxy - contoh konfigurasi (salin ke config.yaml)
+#
+# JANGAN menulis kunci rahasia di file ini untuk produksi.
+# Isi lewat environment (file .env atau secret manager):
+#   HALIMUN_AES_KEY, HALIMUN_HMAC_KEY, HALIMUN_XOR_KEY, HALIMUN_ADMIN_KEY
+# Environment selalu menang atas nilai di file ini.
+#
+# Buat kunci: halimun-proxy --keygen   (atau: cargo run -- --keygen)
+# Cek konfigurasi: halimun-proxy --config config.yaml --check-config
+# ============================================================
+
 server:
+  # Proxy publik. Di Docker gunakan 0.0.0.0; untuk uji lokal 127.0.0.1 sudah cukup.
   host: "0.0.0.0"
-  port: 80
+  port: 8080 # > 1024 agar bisa jalan sebagai user non-root
+  # Admin API. Default aman: 127.0.0.1. Di Docker (diakses Nginx lewat jaringan
+  # internal) gunakan 0.0.0.0 TANPA mempublikasikan port ini ke host.
+  admin_host: "0.0.0.0"
   admin_port: 9090
-  admin_api_key: "change-me-in-production"
+  # Minimal 16 karakter, bukan nilai contoh. Sebaiknya diisi via HALIMUN_ADMIN_KEY.
+  admin_api_key: ""
+  # Endpoint /metrics Prometheus
+  telemetry_host: "0.0.0.0"
   telemetry_port: 9091
 
 encryption:
-  # Generate keys using: halimun-proxy --keygen
-  aes_key: "64-hex-chars-here"
-  hmac_key: "64-hex-chars-here"
-  xor_key: 172
-  base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-  ttl_seconds: 3600
+  # Diisi via env HALIMUN_AES_KEY / HALIMUN_HMAC_KEY (64 karakter hex, dari --keygen)
+  aes_key: ""
+  hmac_key: ""
+  xor_key: 172 # harus sama dengan klien
+  base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" # 32 karakter unik
+  ttl_seconds: 60
 
 security:
+  # Request per IP per menit (fixed window)
   rate_limit_per_minute: 120
-  nonce_ttl_seconds: 600
+  # Batas nonce tersimpan (TTL nonce mengikuti field "expired" token, maks 3600 detik)
+  nonce_ttl_seconds: 300
+  # Host yang boleh dituju jika token berisi "bypass_url": true.
+  # Dicocokkan PERSIS dengan host di URL (bukan substring).
   bypass_whitelist:
-    - "api.trusted.com"
-  strict_domain: "halimun.yourdomain.com"
+    - "api.trusted.internal"
+  # Batas ukuran body request masuk (byte). Maks 16 MB.
+  max_body_bytes: 65536
+  # Batas ukuran body respons backend (byte)
+  max_response_bytes: 10485760
+  # Timeout per panggilan ke backend (ms)
+  upstream_timeout_ms: 15000
+  # Metode HTTP yang boleh diteruskan
+  allowed_methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+  # true HANYA jika proxy ini berada di belakang Nginx yang menimpa X-Real-IP
+  # (seperti nginx/nginx.conf). Jika tidak, biarkan false agar header tidak bisa dipalsukan.
+  trust_proxy_headers: true
+  # Endpoint /keys/generate (membuat kunci acak lewat API). Biarkan false kecuali perlu.
+  allow_key_generation: false
 
+# Daftar service (dikelola juga lewat dashboard / Admin API)
 services:
   - name: "backend-app"
     type: backend

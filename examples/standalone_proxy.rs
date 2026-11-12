@@ -1,59 +1,37 @@
-//! Minimal standalone example demonstrating how to spin up a Halimun Proxy natively
-//! without relying on the physical `config.yaml` file.
+//! Contoh menjalankan proxy tanpa file config (untuk uji lokal).
+//! Kunci diambil dari environment: HALIMUN_AES_KEY, HALIMUN_HMAC_KEY, HALIMUN_ADMIN_KEY.
 //!
-//! Run this example with: `cargo run --example standalone_proxy`
+//! Jalankan: `cargo run --example standalone_proxy`
 
-use halimun_proxy::config::{AppConfig, EncryptionConfig};
+use std::net::SocketAddr;
+use std::sync::Arc;
+
+use halimun_proxy::config::{apply_env_overrides, validate, AppConfig};
 use halimun_proxy::proxy::handler::{router, ProxyState};
-use halimun_proxy::security::rate_limiter::RateLimiter;
 use halimun_proxy::services::logs::Logger;
 use halimun_proxy::services::registry::ServiceRegistry;
-use halimun_proxy::token::replay_guard::ReplayGuard;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::net::TcpListener;
 
 #[tokio::main]
-async fn main() {
-    // 1. Manually configure the encryption secrets bypassing environment variables
-    let config = AppConfig {
-        encryption: EncryptionConfig {
-            aes_key: "0000000000000000000000000000000000000000000000000000000000000000".to_string(), // 64 hex characters (32 bytes)
-            hmac_key: "0000000000000000000000000000000000000000000000000000000000000000"
-                .to_string(),
-            xor_key: 42,
-            base32_alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".to_string(),
-            ttl_seconds: 60,
-        },
-        security: Default::default(),
-        server: Default::default(),
-        services: vec![],
-    };
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
 
-    // 2. Setup internal Services State
+    let mut config = AppConfig::default();
+    config.server.port = 8080;
+    config.server.admin_port = 8081;
+    config.server.telemetry_port = 9090;
+    apply_env_overrides(&mut config);
+    validate(&config)?;
+
     let registry = Arc::new(ServiceRegistry::new(Vec::new()));
-    let replay_guard = ReplayGuard::new();
-    let rate_limiter = Arc::new(RateLimiter::new(60));
-    let logger = Logger::new(100);
-    let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(30))
-        .build()
-        .unwrap();
+    let state = ProxyState::new(config, registry, Logger::new(100))?;
 
-    let state = ProxyState {
-        config,
-        replay_guard,
-        rate_limiter,
-        registry,
-        http_client,
-        logger,
-    };
-
-    // 3. Create the highly-optimized Axum framework router
-    let app = router(state);
-
-    // 4. Bind and Start!
-    println!("Standalone Test Proxy running on http://127.0.0.1:8080");
-    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let addr: SocketAddr = "127.0.0.1:8080".parse()?;
+    println!("Standalone proxy on http://{addr}");
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(
+        listener,
+        router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
+    Ok(())
 }

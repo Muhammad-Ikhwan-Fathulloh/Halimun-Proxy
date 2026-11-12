@@ -3,35 +3,41 @@ use metrics_exporter_prometheus::PrometheusBuilder;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use halimun_proxy::config::{load_config, validate};
 use halimun_proxy::proxy::handler::{router as proxy_router, ProxyState};
-use halimun_proxy::security::rate_limiter::RateLimiter;
-use halimun_proxy::services::admin::router as admin_router;
+use halimun_proxy::services::admin::{router as admin_router, AdminOptions};
 use halimun_proxy::services::health::start_health_checker;
 use halimun_proxy::services::logs::Logger;
 use halimun_proxy::services::registry::ServiceRegistry;
-use halimun_proxy::token::replay_guard::ReplayGuard;
 
 #[derive(Parser, Debug)]
 #[command(name = "halimun-proxy")]
-#[command(about = "High-performance encrypted Rust proxy", long_about = None)]
+#[command(about = "Encrypted reverse proxy (AES-256-CBC + HMAC-SHA256)", long_about = None)]
 struct Cli {
-    /// Generate cross-language sync keys instead of starting the server
+    /// Cetak kunci kriptografi baru lalu keluar
     #[arg(long)]
     keygen: bool,
 
-    /// Format for keygen (env, json, yaml)
+    /// Format keygen: env, json, yaml
     #[arg(short, long, default_value = "env")]
     format: String,
 
-    /// Path to config file
+    /// Path ke file konfigurasi
     #[arg(short, long, default_value = "config.yaml")]
     config: String,
+
+    /// Validasi konfigurasi lalu keluar (tanpa menjalankan server)
+    #[arg(long)]
+    check_config: bool,
+}
+
+fn parse_addr(host: &str, port: u16) -> Result<SocketAddr, Box<dyn std::error::Error>> {
+    Ok(format!("{host}:{port}").parse()?)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::dotenv().ok();
-
     let cli = Cli::parse();
 
     if cli.keygen {
@@ -39,73 +45,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // 1. Load Configuration
-    let app_config = halimun_proxy::config::load_config(&cli.config).unwrap_or_else(|e| {
-        eprintln!("Failed to load config ({}): {}", cli.config, e);
+    let app_config = load_config(&cli.config)
+        .map_err(|e| format!("gagal membaca config {}: {}", cli.config, e))?;
+
+    if let Err(e) = validate(&app_config) {
+        eprintln!("Konfigurasi tidak valid: {e}");
         std::process::exit(1);
-    });
+    }
 
-    // 2. Initialize Shared State Components
-    let replay_guard = ReplayGuard::new();
-    let rate_limiter = Arc::new(RateLimiter::new(app_config.security.rate_limit_per_minute));
-    let registry = Arc::new(ServiceRegistry::new(app_config.services.clone()));
-    let logger = Logger::new(100); // Store last 100 requests in memory
-    let http_client = reqwest::Client::new();
+    if cli.check_config {
+        println!("Konfigurasi {} valid.", cli.config);
+        return Ok(());
+    }
 
-    // 3. Setup Prometheus Telemetry
-    let builder = PrometheusBuilder::new();
-    builder
-        .with_http_listener(SocketAddr::from((
-            [0, 0, 0, 0],
-            app_config.server.telemetry_port,
-        )))
+    let proxy_addr = parse_addr(&app_config.server.host, app_config.server.port)?;
+    let admin_addr = parse_addr(&app_config.server.admin_host, app_config.server.admin_port)?;
+    let telemetry_addr = parse_addr(
+        &app_config.server.telemetry_host,
+        app_config.server.telemetry_port,
+    )?;
+
+    // Telemetry Prometheus (endpoint /metrics terpisah)
+    PrometheusBuilder::new()
+        .with_http_listener(telemetry_addr)
         .install()
-        .expect("failed to install Prometheus recorder");
+        .map_err(|e| format!("gagal memasang Prometheus: {e}"))?;
 
-    // 4. Start Background Services
-    start_health_checker(registry.clone()).await;
+    let registry = Arc::new(ServiceRegistry::new(app_config.services.clone()));
+    let logger = Logger::new(100);
+    start_health_checker(registry.clone());
 
-    // 5. Initialize States & Routers
-    let proxy_state = ProxyState {
-        config: app_config.clone(),
-        replay_guard,
-        rate_limiter,
-        registry: registry.clone(),
-        http_client,
-        logger: logger.clone(),
+    let admin_opts = AdminOptions {
+        allow_keygen: app_config.security.allow_key_generation,
+        xor_key: app_config.encryption.xor_key,
+        alphabet: app_config.encryption.base32_alphabet.clone(),
     };
-
-    let main_router = proxy_router(proxy_state);
-    let admin_api_router = admin_router(
-        registry,
-        app_config.server.admin_api_key.clone(),
-        logger,
+    let admin_key = app_config.server.admin_api_key.clone();
+    let admin_app = admin_router(
+        registry.clone(),
+        admin_key,
+        logger.clone(),
         cli.config.clone(),
+        admin_opts,
     );
 
-    // 6. Bind and Serve
-    let proxy_addr = SocketAddr::from(([0, 0, 0, 0], app_config.server.port));
-    let admin_addr = SocketAddr::from(([0, 0, 0, 0], app_config.server.admin_port));
+    let proxy_state = ProxyState::new(app_config, registry, logger)?;
+    let proxy_app = proxy_router(proxy_state).into_make_service_with_connect_info::<SocketAddr>();
 
-    println!("🚀 Halimun Proxy started on {}", proxy_addr);
-    println!("🛠️ Admin API started on {}", admin_addr);
-    println!(
-        "📊 Telemetry (Prometheus) on port {}",
-        app_config.server.telemetry_port
-    );
+    println!("Halimun Proxy listening on {proxy_addr}");
+    println!("Admin API listening on {admin_addr}");
+    println!("Telemetry (Prometheus) on {telemetry_addr}");
 
-    let proxy_handle = axum::serve(
-        tokio::net::TcpListener::bind(proxy_addr).await?,
-        main_router.into_make_service(),
-    );
+    let proxy_listener = tokio::net::TcpListener::bind(proxy_addr).await?;
+    let admin_listener = tokio::net::TcpListener::bind(admin_addr).await?;
 
-    let admin_handle = axum::serve(
-        tokio::net::TcpListener::bind(admin_addr).await?,
-        admin_api_router.into_make_service(),
-    );
+    let proxy_server =
+        axum::serve(proxy_listener, proxy_app).with_graceful_shutdown(shutdown_signal());
+    let admin_server = axum::serve(
+        admin_listener,
+        admin_app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal());
 
-    // Wait for both servers
-    let _ = tokio::try_join!(proxy_handle, admin_handle)?;
-
+    tokio::try_join!(proxy_server, admin_server)?;
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let _ = tokio::signal::ctrl_c().await;
+    println!("Mematikan server...");
 }

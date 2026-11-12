@@ -1,34 +1,44 @@
 use crate::services::registry::ServiceRegistry;
 use reqwest::Client;
 use std::sync::Arc;
-use tokio::time::{self, Duration};
+use std::time::Duration;
+use tokio::task::JoinSet;
+use tokio::time;
 
-pub async fn start_health_checker(registry: Arc<ServiceRegistry>) {
+const CHECK_INTERVAL: Duration = Duration::from_secs(30);
+const CHECK_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Menjalankan pengecekan kesehatan berkala. Semua service dicek PARALEL
+/// (waktu siklus = max latensi, bukan jumlah latensi), dan hasilnya disimpan di registry.
+pub fn start_health_checker(registry: Arc<ServiceRegistry>) {
     let client = Client::builder()
-        .timeout(Duration::from_secs(5))
+        .timeout(CHECK_TIMEOUT)
+        .connect_timeout(CHECK_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::none())
         .build()
-        .unwrap();
-
-    let mut interval = time::interval(Duration::from_secs(30));
+        .expect("klien health check");
 
     tokio::spawn(async move {
+        let mut interval = time::interval(CHECK_INTERVAL);
         loop {
             interval.tick().await;
-
-            let services = registry.all_services();
-            for service in services {
+            let mut set = JoinSet::new();
+            for service in registry.all_services() {
                 if service.health.is_empty() {
                     continue;
                 }
-
-                let health_url = format!("{}{}", service.url, service.health);
-                let _is_healthy = match client.get(&health_url).send().await {
-                    Ok(resp) => resp.status().is_success(),
-                    Err(_) => false,
-                };
-
-                // Update health map internal state
-                // This is a minimal example
+                let client = client.clone();
+                set.spawn(async move {
+                    let url = format!("{}{}", service.url.trim_end_matches('/'), service.health);
+                    let healthy =
+                        matches!(client.get(&url).send().await, Ok(r) if r.status().is_success());
+                    (service.name, healthy)
+                });
+            }
+            while let Some(joined) = set.join_next().await {
+                if let Ok((name, healthy)) = joined {
+                    registry.set_health(&name, healthy);
+                }
             }
         }
     });

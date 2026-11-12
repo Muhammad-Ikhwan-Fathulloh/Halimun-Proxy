@@ -645,8 +645,8 @@
         <main class="main">
             <div class="top">
                 <div class="top-left">
-                    <input type="password" id="apiKey" class="api-in" placeholder="Admin Key..."
-                        value="admin-secret-key">
+                    <input type="password" id="apiKey" class="api-in" placeholder="Admin Key (HALIMUN_ADMIN_KEY)..."
+                        autocomplete="off">
                 </div>
                 <button class="btn btn-sm" onclick="fetchLogs()" id="connectBtn">Connect</button>
             </div>
@@ -818,6 +818,11 @@
             });
         });
 
+        // Mencegah XSS: semua data dari API (IP, URL, nama service) di-escape sebelum dirender.
+        function esc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         async function apiFetch(ep, method = 'GET', body = null) {
             const key = document.getElementById('apiKey').value;
             const opts = { method, headers: { 'x-admin-key': key } };
@@ -837,9 +842,9 @@
             document.getElementById('logBody').innerHTML = data.map(l => `
         <tr class="${l.status >= 400 ? 'threat-row' : ''}">
             <td>${new Date(l.timestamp).toLocaleTimeString()}</td>
-            <td style="color:var(--accent)">${l.method}</td>
-            <td>${l.target_url.split('/').pop() || l.target_url}</td>
-            <td>${l.ip}</td>
+            <td style="color:var(--accent)">${esc(l.method)}</td>
+            <td>${esc(l.target_url.split('/').pop() || l.target_url)}</td>
+            <td>${esc(l.ip)}</td>
             <td>${l.execution_ms}ms</td>
             <td class="${l.status >= 400 ? 's5' : 's2'}">${l.status}</td>
         </tr>`).join('') || '<tr><td colspan="6">No traffic</td></tr>';
@@ -848,7 +853,7 @@
             document.getElementById('s-4xx').textContent = data.filter(l => l.status >= 400).length;
 
             document.getElementById('threatTable').innerHTML = data.filter(l => l.status >= 400).map(l => `
-        <tr><td>${l.ip}</td><td class="s5">Error ${l.status}</td><td>${new Date(l.timestamp).toLocaleTimeString()}</td></tr>
+        <tr><td>${esc(l.ip)}</td><td class="s5">Error ${esc(l.status)}</td><td>${new Date(l.timestamp).toLocaleTimeString()}</td></tr>
     `).join('') || '<tr><td colspan="3">Clean posture</td></tr>';
         }
 
@@ -858,10 +863,10 @@
             document.getElementById('svcGrid').innerHTML = data.map(s => `
         <div class="sc">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <span class="sn">${s.name} <i class="sb">${s.type}</i></span>
-                <button class="btn-danger" onclick="deleteService('${s.name}')"><svg style="width:12px;height:12px;stroke:currentColor"><use href="#icon-trash"/></svg></button>
+                <span class="sn">${esc(s.name)} <i class="sb">${esc(s.type)}</i></span>
+                <button class="btn-danger" onclick="deleteService('${esc(s.name)}')"><svg style="width:12px;height:12px;stroke:currentColor"><use href="#icon-trash"/></svg></button>
             </div>
-            <div style="font-size:0.8rem;opacity:0.7">🔗 ${s.url}</div>
+            <div style="font-size:0.8rem;opacity:0.7">🔗 ${esc(s.url)}</div>
             <div style="margin-top:10px;font-size:0.7rem"><span class="hpulse"></span> Active Mapping</div>
         </div>`).join('');
         }
@@ -882,7 +887,7 @@
             const keys = await apiFetch('/keys/generate');
             if (!keys) return;
             document.getElementById('staticKeysOut').innerHTML = Object.entries(keys).map(([k, v]) => `
-        <div class="c"><div class="stat-lbl">${k}</div><div class="key-box blur" onclick="this.classList.toggle('blur')">${v}</div></div>
+        <div class="c"><div class="stat-lbl">${esc(k)}</div><div class="key-box blur" onclick="this.classList.toggle('blur')">${esc(v)}</div></div>
     `).join('');
             document.getElementById('keyExport').textContent = JSON.stringify(keys, null, 4);
         }

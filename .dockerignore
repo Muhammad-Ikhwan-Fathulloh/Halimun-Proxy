@@ -1,0 +1,14 @@
+# Jangan pernah ikut ke dalam image: rahasia, artefak build, dan data lokal
+target/
+.git/
+.github/
+.env
+.env.*
+config.yaml
+config.production.yaml
+nginx/.htpasswd
+nginx/.htpasswd.backup
+dashboard/
+examples/
+tests/
+*.md

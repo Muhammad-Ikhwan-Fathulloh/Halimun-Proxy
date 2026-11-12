@@ -1,30 +1,33 @@
+# syntax=docker/dockerfile:1
+# Stage 1: build statis (musl) dengan cache dependensi terpisah
 FROM rust:alpine AS builder
 
 WORKDIR /usr/src/halimun-proxy
-RUN apk add --no-cache musl-dev gcc pkgconfig openssl-dev openssl-libs-static
+RUN apk add --no-cache musl-dev gcc
 
-# Create dummy src for dependency caching
-COPY Cargo.toml Cargo.lock* ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release
-RUN rm -rf src
+# Layer dependensi (di-cache selama Cargo.toml/Cargo.lock tidak berubah)
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs && echo "" > src/lib.rs \
+    && cargo build --release --locked \
+    && rm -rf src
 
-# Build actual code
+# Build kode sebenarnya
 COPY src ./src
-# Touch main to force rebuild
-RUN touch src/main.rs
-RUN cargo build --release
+RUN touch src/main.rs src/lib.rs && cargo build --release --locked
 
-# Stage 2: Minimal runtime
-FROM alpine:3.19
+# Stage 2: runtime minimal, non-root, tanpa shell pengguna
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates \
+    && addgroup -S halimun \
+    && adduser -S -G halimun -h /app halimun
 
 WORKDIR /app
-# Add openssl and ca-certificates for reqwest/HTTPS support
-RUN apk add --no-cache libgcc openssl ca-certificates
-
 COPY --from=builder /usr/src/halimun-proxy/target/release/halimun-proxy ./halimun-proxy
 
-EXPOSE 80 9090
+USER halimun
+# 8080 = proxy (internal Docker), 9090 = admin API (jangan dipublikasikan ke host)
+EXPOSE 8080 9090
 
 ENTRYPOINT ["./halimun-proxy"]
-CMD ["--config", "config.yaml"]
+CMD ["--config", "/app/config.yaml"]

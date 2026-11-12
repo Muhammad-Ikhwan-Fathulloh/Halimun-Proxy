@@ -197,7 +197,7 @@ SSRF Loop Blocked (403)
 
 ## 🤖 Analytics Dashboard
 Halimun features an isolated, framework-free Glassmorphism Administrator UI at:
-**`http://localhost/dashboard/`** (Secured via Nginx basic auth: `admin/admin123`)
+**`http://localhost/dashboard/`** (secured via Nginx basic auth; create your own user with `htpasswd`, there are no default credentials). Full guide (Indonesian): [docs/PANDUAN.md](docs/PANDUAN.md)
 
 It acts as a control center where you can view:
 1. **Live Traffic Logs**: Watch connections routed to backend containers.

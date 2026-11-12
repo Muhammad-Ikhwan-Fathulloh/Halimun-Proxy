@@ -29,7 +29,7 @@ docker run --rm halimun-proxy --keygen --format=env > .env
 # Windows (PowerShell)
 docker run --rm halimun-proxy --keygen --format=env | Out-File -Encoding ASCII .env
 ```
-Salin data di dalam `.env` yang baru terbuat tersebut dan masukkan ke dalam `config.yaml` Anda.
+Isi `HALIMUN_AES_KEY`, `HALIMUN_HMAC_KEY`, dan `HALIMUN_ADMIN_KEY` di `.env` (dan salin `config.example.yaml` menjadi `config.yaml`). Kunci rahasia **tidak** ditulis di `config.yaml`. Panduan lengkap, termasuk cara pakai klien dan checklist keamanan: **[docs/PANDUAN.md](docs/PANDUAN.md)**.
 
 **2. Jalankan Cluster Produksi**
 ```bash
@@ -177,7 +177,7 @@ Namun, bila Request itu bermasalah, Halimun secara tangkas membunuhnya di garis 
 
 ## 🤖 Analytics Dashboard
 Halimun dibekali GUI Administratif ringan (*Glassmorphism Design*) yang berdiri sendiri tanpa _framework npm_ rumit. 
-Kunjungi **`http://localhost/dashboard/`** (Kredensial Default Nginx Auth: `admin/admin123`)
+Kunjungi **`http://localhost/dashboard/`** (login memakai user Nginx basic auth yang Anda buat sendiri dengan `htpasswd`; tidak ada kredensial default)
 
 Fitur utama Dashboard:
 1. **Live Traffic Logs**: Memantau Request rute dan latensi detik itu juga.
