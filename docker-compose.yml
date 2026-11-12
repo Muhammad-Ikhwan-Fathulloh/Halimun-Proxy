@@ -34,8 +34,11 @@ services:
       - halimun-proxy
 
   halimun-proxy:
-    build: .
-    image: halimun-proxy:local
+    # Default: image resmi dari Docker Hub (jalankan `docker compose pull`).
+    # Untuk memakai image hasil build lokal:
+    #   docker build -t halimun-proxy:local .
+    #   HALIMUN_IMAGE=halimun-proxy:local docker compose up -d
+    image: ${HALIMUN_IMAGE:-ikhwan17/halimun-proxy:latest}
     container_name: halimun_rust
     restart: unless-stopped
     volumes:

@@ -22,19 +22,22 @@ Copy the environment template and generate encryption keys natively:
 ```bash
 cp .env.example .env
 
-# Generate keys using Halimun's isolated keygen
-docker build -t halimun-proxy .
+# Pull the official image from Docker Hub: https://hub.docker.com/r/ikhwan17/halimun-proxy
+docker pull ikhwan17/halimun-proxy:latest
+# Generate keys
 # Linux/macOS
-docker run --rm halimun-proxy --keygen --format=env > .env
+docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env > .env
 # Windows (PowerShell)
-docker run --rm halimun-proxy --keygen --format=env | Out-File -Encoding ASCII .env
+docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env | Out-File -Encoding ASCII .env
 ```
 Copy your `.env` contents to `config.yaml` to configure target IPs and backend maps.
 
 **2. Start the Cluster**
 ```bash
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
+Want to build from source instead? See "Build lokal" in [docs/PANDUAN.md](docs/PANDUAN.md).
 *Your production proxy is now securely listening on port `80` while hiding internal systems!*
 
 ---

@@ -53,6 +53,16 @@ Hanya Nginx yang terbuka ke publik. Halimun dan Admin API berada di jaringan int
 
 ## 3. Menjalankan dengan Docker (disarankan)
 
+Image resmi tersedia di Docker Hub: **[ikhwan17/halimun-proxy](https://hub.docker.com/r/ikhwan17/halimun-proxy)**. Tidak perlu build sendiri:
+
+```bash
+docker pull ikhwan17/halimun-proxy:latest
+```
+
+Untuk produksi, sebaiknya pakai tag versi (mis. `ikhwan17/halimun-proxy:0.2.0`, jika tersedia di halaman Docker Hub) agar tidak berubah tanpa sepengetahuan Anda. Gunakan `latest` untuk uji coba.
+
+Jika ingin build dari source, lihat [Build lokal](#build-lokal-opsional) di bawah.
+
 ### Langkah 1 - Salin file contoh
 
 Linux / macOS:
@@ -69,11 +79,10 @@ Copy-Item config.example.yaml config.yaml
 
 ### Langkah 2 - Buat kunci kriptografi
 
-Build image dulu, lalu cetak kunci:
+Cetak kunci dengan image dari Docker Hub:
 
 ```bash
-docker build -t halimun-proxy:local .
-docker run --rm halimun-proxy:local --keygen --format=env
+docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env
 ```
 
 Salin hasilnya ke `.env` untuk `HALIMUN_AES_KEY`, `HALIMUN_HMAC_KEY`, dan `HALIMUN_XOR_KEY`. Jangan tulis kunci ke `config.yaml`, dan jangan commit `.env`.
@@ -121,7 +130,8 @@ git rm --cached nginx/.htpasswd
 ### Langkah 4 - Jalankan
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose ps
 docker compose logs -f halimun-proxy
 ```
@@ -139,6 +149,21 @@ Buka `http://localhost/dashboard/`, login dengan user Nginx tadi, lalu masukkan 
 Edit `services` di `config.yaml` atau tambahkan lewat dashboard. Backend contoh `backend_dummy` ada di `docker-compose.yml`. Ganti atau hapus sesuai kebutuhan.
 
 Jika backend Anda berada di luar Docker, gunakan `bypass_whitelist` (lihat [bagian 8](#8-target-internal-bypass-whitelist)).
+
+### Build lokal (opsional)
+
+Jika ingin memakai kode Anda sendiri, build image lokal lalu arahkan compose ke image itu:
+
+```bash
+docker build -t halimun-proxy:local .
+HALIMUN_IMAGE=halimun-proxy:local docker compose up -d
+```
+
+PowerShell:
+```powershell
+docker build -t halimun-proxy:local .
+$env:HALIMUN_IMAGE = "halimun-proxy:local"; docker compose up -d
+```
 
 ### Menghentikan
 

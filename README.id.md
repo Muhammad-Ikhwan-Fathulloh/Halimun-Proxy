@@ -22,19 +22,22 @@ Lakukan clone dan gunakan _generator_ untuk mencipta Environment aman secara aca
 ```bash
 cp .env.example .env
 
-# Gunakan Image Docker untuk melakukan compile dan mencetak kunci Kriptografi
-docker build -t halimun-proxy .
+# Ambil image resmi dari Docker Hub: https://hub.docker.com/r/ikhwan17/halimun-proxy
+docker pull ikhwan17/halimun-proxy:latest
+# Cetak kunci Kriptografi
 # Linux/macOS
-docker run --rm halimun-proxy --keygen --format=env > .env
+docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env > .env
 # Windows (PowerShell)
-docker run --rm halimun-proxy --keygen --format=env | Out-File -Encoding ASCII .env
+docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env | Out-File -Encoding ASCII .env
 ```
 Isi `HALIMUN_AES_KEY`, `HALIMUN_HMAC_KEY`, dan `HALIMUN_ADMIN_KEY` di `.env` (dan salin `config.example.yaml` menjadi `config.yaml`). Kunci rahasia **tidak** ditulis di `config.yaml`. Panduan lengkap, termasuk cara pakai klien dan checklist keamanan: **[docs/PANDUAN.md](docs/PANDUAN.md)**.
 
 **2. Jalankan Cluster Produksi**
 ```bash
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
+Ingin build dari source sendiri? Lihat bagian "Build lokal" di [docs/PANDUAN.md](docs/PANDUAN.md).
 *Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` sementara target sistem internal Anda disembunyikan rapat-rapat!*
 
 ---
