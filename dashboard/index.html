@@ -1,902 +1,588 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halimun Security Center</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap"
-        rel="stylesheet">
+    <meta name="referrer" content="no-referrer">
+    <title>Halimun Admin</title>
     <style>
         :root {
-            --bg: #0b0c10;
-            --surface: rgba(31, 40, 51, 0.45);
-            --border: rgba(69, 162, 158, 0.15);
-            --glow: rgba(102, 252, 241, 0.6);
-            --text: #c5c6c7;
-            --accent: #66fcf1;
-            --accent2: #45a29e;
-            --ok: #38bdf8;
-            --err: #f43f5e;
-            --warn: #fbbf24;
-            --r: 12px;
+            --bg: #f5f6f8;
+            --panel: #ffffff;
+            --text: #1d232b;
+            --muted: #6b7480;
+            --line: #e1e5ea;
+            --accent: #0f6b74;
+            --accent-text: #ffffff;
+            --ok: #1b7f4b;
+            --warn: #b26a00;
+            --bad: #b3261e;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #111418;
+                --panel: #1a1e24;
+                --text: #e6e9ed;
+                --muted: #8b95a1;
+                --line: #2a3038;
+                --accent: #4fb8c2;
+                --accent-text: #0b1114;
+                --ok: #4ade80;
+                --warn: #f5b041;
+                --bad: #f87171;
+            }
+        }
+        :root[data-theme="dark"] {
+            --bg: #111418;
+            --panel: #1a1e24;
+            --text: #e6e9ed;
+            --muted: #8b95a1;
+            --line: #2a3038;
+            --accent: #4fb8c2;
+            --accent-text: #0b1114;
+            --ok: #4ade80;
+            --warn: #f5b041;
+            --bad: #f87171;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
+        html, body { margin: 0; height: 100%; }
         body {
-            font-family: 'Outfit', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            background-image:
-                radial-gradient(circle at 15% 50%, rgba(69, 162, 158, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(102, 252, 241, 0.05) 0%, transparent 50%);
+            font: 14px/1.5 var(--sans);
         }
+        button, input, select { font: inherit; color: inherit; }
 
-        .dash {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* Sidebar */
-        .side {
-            background: var(--surface);
-            backdrop-filter: blur(16px);
-            border-right: 1px solid var(--border);
-            padding: 1.5rem;
+        .layout { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+        .sidebar {
+            background: var(--panel);
+            border-right: 1px solid var(--line);
+            padding: 20px 12px;
             display: flex;
             flex-direction: column;
-            box-shadow: 5px 0 30px rgba(0, 0, 0, .3);
-            z-index: 10;
+            gap: 4px;
         }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #fff;
-            margin-bottom: 2.5rem;
-            text-shadow: 0 0 20px var(--glow);
-            letter-spacing: 2px;
-        }
-
-        .navs {
-            display: flex;
-            flex-direction: column;
-            gap: .4rem;
-        }
-
+        .brand { font-weight: 600; font-size: 15px; padding: 0 8px 16px; letter-spacing: .02em; }
+        .brand small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
         .nav {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text);
-            padding: .8rem 1rem;
-            border-radius: var(--r);
-            font-family: inherit;
-            font-size: .95rem;
+            background: none;
+            border: 0;
             text-align: left;
+            padding: 8px 10px;
+            border-radius: 6px;
+            color: var(--muted);
             cursor: pointer;
-            transition: all .3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
         }
+        .nav:hover { color: var(--text); background: var(--bg); }
+        .nav.on { color: var(--text); background: var(--bg); font-weight: 600; }
+        .sidebar .version { margin-top: auto; padding: 8px; color: var(--muted); font-size: 12px; }
 
-        .nav svg {
-            width: 18px;
-            height: 18px;
-            stroke: currentColor;
-            stroke-width: 2;
-            fill: none;
-            opacity: 0.7;
-            transition: opacity 0.3s;
+        .main { padding: 24px 28px; min-width: 0; }
+        .topbar { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .topbar .spacer { flex: 1; }
+        .status { color: var(--muted); font-size: 13px; }
+        .status.error { color: var(--bad); }
+
+        input.field, select.field {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 7px 10px;
+            min-width: 0;
         }
-
-        .nav:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, .05);
-            transform: translateX(4px);
+        input.field:focus, select.field:focus, button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
         }
-
-        .nav:hover svg {
-            opacity: 1;
-        }
-
-        .nav.on {
-            background: rgba(102, 252, 241, .1);
-            border: 1px solid rgba(102, 252, 241, .3);
-            color: var(--accent);
-            box-shadow: 0 0 20px rgba(102, 252, 241, .1);
-        }
-
-        .nav.on svg {
-            opacity: 1;
-        }
-
-        .version {
-            margin-top: auto;
-            font-size: .75rem;
-            color: rgba(255, 255, 255, .2);
-            text-align: center;
-            padding-top: 1rem;
-        }
-
-        /* Main Content */
-        .main {
-            padding: 1.5rem 2rem;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-
-        .top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            gap: 1rem;
-        }
-
-        .top-left {
-            display: flex;
-            align-items: center;
-            gap: .6rem;
-        }
-
-        .api-in {
-            background: rgba(0, 0, 0, .3);
-            border: 1px solid var(--border);
-            color: var(--accent);
-            padding: .6rem 1rem;
-            border-radius: 8px;
-            width: 260px;
-            font-family: 'Fira Code', monospace;
-            font-size: .85rem;
-            outline: none;
-            transition: border .3s ease;
-        }
-
-        .api-in:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(102, 252, 241, .2);
-        }
-
-        /* Panels */
-        .p {
-            border-radius: 16px;
-            margin-bottom: 1.5rem;
-            display: none;
-            animation: fi .4s ease forwards;
-        }
-
-        .p.on {
-            display: block;
-        }
-
-        @keyframes fi {
-            from {
-                opacity: 0;
-                transform: translateY(8px)
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0)
-            }
-        }
-
-        .pt {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .pt span {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-        }
-
-        .pt svg {
-            width: 24px;
-            height: 24px;
-            stroke: var(--accent);
-            stroke-width: 2.5;
-            fill: none;
-        }
-
-        /* Cards & Grids */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .c {
-            background: var(--surface);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            position: relative;
-        }
-
-        .ct {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
-
-        .ct svg {
-            width: 20px;
-            height: 20px;
-            stroke: var(--accent);
-            stroke-width: 2;
-            fill: none;
-        }
-
-        /* Stats & Indicators */
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat {
-            background: rgba(0, 0, 0, .25);
-            border: 1px solid rgba(255, 255, 255, .04);
-            border-radius: var(--r);
-            padding: 1.2rem;
-            text-align: center;
-            transition: transform .3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-val {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #fff;
-            position: relative;
-            z-index: 2;
-        }
-
-        .stat-lbl {
-            font-size: .75rem;
-            color: rgba(255, 255, 255, .4);
-            margin-top: .3rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Buttons */
         .btn {
-            background: linear-gradient(135deg, #45a29e, #66fcf1);
-            color: #0b0c10;
-            border: none;
-            padding: .6rem 1.2rem;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: .9rem;
-            cursor: pointer;
-            transition: all .3s ease;
-        }
-
-        .btn:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-sm {
-            padding: .4rem .8rem;
-            font-size: .8rem;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--accent2);
-            color: var(--accent);
-            padding: .5rem 1rem;
-            border-radius: 8px;
-            font-size: .85rem;
-            cursor: pointer;
-        }
-
-        .btn-danger {
-            background: rgba(244, 63, 94, 0.15);
-            border: 1px solid var(--err);
-            color: var(--err);
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
-
-        .btn-danger:hover {
-            background: var(--err);
-            color: #fff;
-        }
-
-        /* Tables */
-        .tw {
-            overflow-x: auto;
-            border-radius: var(--r);
-            border: 1px solid var(--border);
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'Fira Code', monospace;
-            font-size: .85rem;
-        }
-
-        th,
-        td {
-            padding: .9rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, .04);
-        }
-
-        th {
-            background: rgba(0, 0, 0, .4);
-            color: #fff;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-        }
-
-        .s2 {
-            color: var(--ok);
-        }
-
-        .s4 {
-            color: var(--warn);
-        }
-
-        .s5 {
-            color: var(--err);
-        }
-
-        .threat-row {
-            border-left: 3px solid var(--err);
-        }
-
-        /* Guide Steps */
-        .g-step {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            margin-bottom: 0.8rem;
-            overflow: hidden;
-        }
-
-        .g-head {
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .g-num {
-            width: 24px;
-            height: 24px;
             background: var(--accent);
-            color: var(--bg);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.8rem;
-            margin-right: 1rem;
-        }
-
-        .g-title {
-            font-weight: 600;
-            color: #fff;
-            flex-grow: 1;
-        }
-
-        .g-body {
-            padding: 0 1rem 1.5rem 3.5rem;
-            display: none;
-            color: var(--text);
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
-
-        .g-step.on .g-body {
-            display: block;
-        }
-
-        .cb {
-            background: #050608;
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: 'Fira Code', monospace;
-            color: #a9b7c6;
-            font-size: .8rem;
-            margin-top: 0.8rem;
-            white-space: pre-wrap;
-        }
-
-        /* Registry Hub */
-        .sg {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.2rem;
-        }
-
-        .sc {
-            background: rgba(30, 40, 50, 0.5);
-            border: 1px solid var(--border);
-            padding: 1.2rem;
-            border-radius: var(--r);
-            position: relative;
-        }
-
-        .sb {
-            font-size: 0.65rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            text-transform: uppercase;
-            border: 1px solid currentColor;
-            margin-left: 0.5rem;
-        }
-
-        .hpulse {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            display: inline-block;
-            margin-right: 6px;
-            box-shadow: 0 0 8px #4ade80;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.4;
-            }
-        }
-
-        /* Modal */
-        .modal-bg {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .modal-bg.on {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            width: 100%;
-            max-width: 400px;
-            border-radius: 16px;
-            padding: 1.5rem;
-        }
-
-        .in-text {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 0.7rem;
-            color: #fff;
-            margin-bottom: 1rem;
-            outline: none;
-        }
-
-        /* Keys */
-        .key-row {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.6rem;
-        }
-
-        .key-box {
-            flex-grow: 1;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 0.6rem;
+            color: var(--accent-text);
+            border: 1px solid var(--accent);
             border-radius: 6px;
-            border: 1px solid var(--border);
-            font-family: 'Fira Code', monospace;
-            font-size: 0.8rem;
-            color: var(--accent);
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .blur {
-            filter: blur(4px);
+            padding: 7px 14px;
             cursor: pointer;
+            font-weight: 600;
+        }
+        .btn.secondary { background: var(--panel); color: var(--text); border-color: var(--line); font-weight: 400; }
+        .btn.danger { background: var(--panel); color: var(--bad); border-color: var(--line); font-weight: 400; }
+        .btn:disabled { opacity: .5; cursor: default; }
+
+        .view { display: none; }
+        .view.on { display: block; }
+        h2 { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+        h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+        .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+        .card .value { font-size: 22px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+        .card .value.ok { color: var(--ok); }
+        .card .value.bad { color: var(--bad); }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .table-wrap { overflow: auto; max-height: 560px; border: 1px solid var(--line); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; background: var(--panel); }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+        th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+        tr:last-child td { border-bottom: 0; }
+        td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .s-ok { color: var(--ok); font-weight: 600; }
+        .s-warn { color: var(--warn); font-weight: 600; }
+        .s-bad { color: var(--bad); font-weight: 600; }
+        .empty { color: var(--muted); text-align: center; padding: 24px; }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+
+        .svc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+        .svc { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+        .svc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .svc-name { font-weight: 600; word-break: break-all; }
+        .svc-meta { color: var(--muted); font-size: 12.5px; margin-top: 6px; word-break: break-all; }
+        .badge { display: inline-block; font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--muted); margin-left: 6px; vertical-align: middle; }
+
+        .keys { display: grid; gap: 10px; }
+        .key-row { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: center; }
+        .key-row .k { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+        .key-row .v {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px 8px;
+            word-break: break-all;
+            cursor: pointer;
+            user-select: all;
+        }
+        pre.raw {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: var(--mono);
+            font-size: 12.5px;
+            overflow: auto;
+            margin: 0;
         }
 
-        .blur:hover {
-            filter: blur(0);
+        ol.steps { margin: 0; padding-left: 20px; }
+        ol.steps li { margin-bottom: 14px; }
+        ol.steps code, p code, li code {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 1px 5px;
         }
+        pre.cmd {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-family: var(--mono);
+            font-size: 12.5px;
+            overflow: auto;
+            margin: 6px 0 0;
+        }
+
+        .modal-bg {
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, .4);
+            display: none;
+            align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        .modal-bg.on { display: flex; }
+        .modal {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 420px;
+            display: grid;
+            gap: 10px;
+        }
+        .modal label { color: var(--muted); font-size: 12px; }
+        .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+        @media (max-width: 760px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px; }
+            .brand { padding: 0 8px 0 0; }
+            .sidebar .version { display: none; }
+            .main { padding: 16px; }
+            .key-row { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
     </style>
 </head>
-
 <body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">Halimun<small>Admin console</small></div>
+        <button class="nav on" data-view="logs">Traffic</button>
+        <button class="nav" data-view="overview">Overview</button>
+        <button class="nav" data-view="services">Services</button>
+        <button class="nav" data-view="threats">Errors</button>
+        <button class="nav" data-view="keys">Keys</button>
+        <button class="nav" data-view="guide">Guide</button>
+        <div class="version">v0.2.0</div>
+    </aside>
 
-    <svg style="display:none">
-        <symbol id="icon-logs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20V10" />
-            <path d="M18 20V4" />
-            <path d="M6 20v-4" />
-        </symbol>
-        <symbol id="icon-security" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </symbol>
-        <symbol id="icon-registry" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9h18" />
-            <path d="M3 15h18" />
-            <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-        </symbol>
-        <symbol id="icon-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 2l-2 2" />
-            <circle cx="7.5" cy="15.5" r="5.5" />
-            <path d="m21 2-9.6 9.6" />
-            <path d="m15.5 7.5 3 3L22 7l-3-3L15.5 7.5Z" />
-        </symbol>
-        <symbol id="icon-guide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 16v-4" />
-            <path d="M12 8h.01" />
-        </symbol>
-        <symbol id="icon-threat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="m13 2-10 12h9l-1 8 10-12h-9l1-8z" />
-        </symbol>
-        <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </symbol>
-        <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </symbol>
-        <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M5 12h14" />
-        </symbol>
-        <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6h18" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        </symbol>
-        <symbol id="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="m6 9 6 6 6-6" />
-        </symbol>
-    </svg>
+    <main class="main">
+        <div class="topbar">
+            <input id="apiKey" class="field" type="password" placeholder="Admin key (HALIMUN_ADMIN_KEY)" autocomplete="off" style="width:280px">
+            <button class="btn" id="connectBtn">Connect</button>
+            <span class="spacer"></span>
+            <span id="status" class="status">Not connected</span>
+        </div>
 
-    <div class="dash">
-        <aside class="side">
-            <div class="logo">HALIMUN::</div>
-            <div class="navs">
-                <button class="nav on" data-t="logs-p"><svg>
-                        <use href="#icon-logs" />
-                    </svg> <span>Traffic Logs</span></button>
-                <button class="nav" data-t="sec-p"><svg>
-                        <use href="#icon-security" />
-                    </svg> <span>Overview</span></button>
-                <button class="nav" data-t="svc-p"><svg>
-                        <use href="#icon-registry" />
-                    </svg> <span>Registry</span></button>
-                <button class="nav" data-t="key-p"><svg>
-                        <use href="#icon-key" />
-                    </svg> <span>Keys</span></button>
-                <button class="nav" data-t="guide-p"><svg>
-                        <use href="#icon-guide" />
-                    </svg> <span>Guide</span></button>
-                <button class="nav" data-t="threat-p"><svg>
-                        <use href="#icon-threat" />
-                    </svg> <span>Threats</span></button>
+        <!-- Traffic -->
+        <section id="view-logs" class="view on">
+            <h2>Traffic</h2>
+            <div class="cards">
+                <div class="card"><div class="label">Requests</div><div class="value" id="s-total">0</div></div>
+                <div class="card"><div class="label">Successful</div><div class="value ok" id="s-ok">0</div></div>
+                <div class="card"><div class="label">Rejected or failed</div><div class="value bad" id="s-err">0</div></div>
             </div>
-            <div class="version">Halimun Console v0.4.0</div>
-        </aside>
-
-        <main class="main">
-            <div class="top">
-                <div class="top-left">
-                    <input type="password" id="apiKey" class="api-in" placeholder="Admin Key (HALIMUN_ADMIN_KEY)..."
-                        autocomplete="off">
-                </div>
-                <button class="btn btn-sm" onclick="fetchLogs()" id="connectBtn">Connect</button>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Time</th><th>Method</th><th>Target</th><th>Client IP</th><th class="num">Latency</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="logBody"><tr><td class="empty" colspan="6">Connect to load recent requests.</td></tr></tbody>
+                </table>
             </div>
+            <p class="status" style="margin-top:8px">Shows the last 100 requests. Query strings are removed from target URLs.</p>
+        </section>
 
-            <!-- 1. TRAFFIC LOGS -->
-            <section id="logs-p" class="p on">
-                <div class="pt"><span><svg>
-                            <use href="#icon-logs" />
-                        </svg> Microservice Traffic</span></div>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-val" id="s-total">0</div>
-                        <div class="stat-lbl">Hits</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-val s2" id="s-ok">0</div>
-                        <div class="stat-lbl">OK</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-val s4" id="s-4xx">0</div>
-                        <div class="stat-lbl">Blocked</div>
-                    </div>
-                </div>
-                <div class="tw">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Method</th>
-                                <th>Target</th>
-                                <th>IP</th>
-                                <th>ms</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logBody"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- 2. SECURITY OVERVIEW -->
-            <section id="sec-p" class="p">
-                <div class="pt"><span><svg>
-                            <use href="#icon-security" />
-                        </svg> Posture Status</span></div>
-                <div class="grid-2">
-                    <div class="c">
-                        <div class="ct"><svg>
-                                <use href="#icon-lock" />
-                            </svg> Methods</div>
-                        <p style="font-size:0.9rem;opacity:0.8">AES-256-CBC Encryption<br>HMAC-SHA256
-                            Integrity<br>Replay Attack Guard</p>
-                    </div>
-                    <div class="c">
-                        <div class="ct"><svg>
-                                <use href="#icon-shield" />
-                            </svg> SSRF Shield</div>
-                        <p style="font-size:0.9rem;opacity:0.8">Internal IP Recursive Filter: Active<br>Strict Domain
-                            Verification: Active</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 3. REGISTRY -->
-            <section id="svc-p" class="p">
-                <div class="pt"><span><svg>
-                            <use href="#icon-registry" />
-                        </svg> Endpoint Management</span><button class="btn btn-sm" onclick="openAddSvc()"><svg
-                            style="width:14px;height:14px;stroke:#000;margin-right:5px">
-                            <use href="#icon-plus" />
-                        </svg> New</button></div>
-                <div class="sg" id="svcGrid"></div>
-            </section>
-
-            <!-- 4. KEYS -->
-            <section id="key-p" class="p">
-                <div class="pt"><span><svg>
-                            <use href="#icon-key" />
-                        </svg> Key Matrix</span><button class="btn btn-sm" onclick="genKeys()">Generate</button></div>
-                <div id="staticKeysOut" class="grid-2"></div>
-                <div class="c" style="margin-top:1.5rem;">
-                    <div class="ct">Raw Payload</div>
-                    <div class="cb" id="keyExport">// Private JSON material...</div>
-                </div>
-            </section>
-
-            <!-- 5. USAGE GUIDE -->
-            <section id="guide-p" class="p">
-                <div class="pt"><span><svg>
-                            <use href="#icon-guide" />
-                        </svg> Setup Wizard</span></div>
-                <div class="g-step on">
-                    <div class="g-head" onclick="toggleStep(this)">
-                        <div class="g-num">1</div>
-                        <div class="g-title">Config Bootstrap</div>
-                    </div>
-                    <div class="g-body">Create `config.yaml` with your admin keys and target mappings.</div>
-                </div>
-                <div class="g-step">
-                    <div class="g-head" onclick="toggleStep(this)">
-                        <div class="g-num">2</div>
-                        <div class="g-title">Docker Deployment</div>
-                    </div>
-                    <div class="g-body">Run `docker-compose up -d`. Use the specific PowerShell command in README if on
-                        Windows.</div>
-                </div>
-                <div class="g-step">
-                    <div class="g-head" onclick="toggleStep(this)">
-                        <div class="g-num">3</div>
-                        <div class="g-title">Client Encryption</div>
-                    </div>
-                    <div class="g-body">Use the keys from the <b>Keys</b> panel to encrypt your requests in the client
-                        app.</div>
-                </div>
-            </section>
-
-            <!-- 6. THREAT MONITOR -->
-            <section id="threat-p" class="p">
-                <div class="pt"><span><svg>
-                            <use href="#icon-threat" />
-                        </svg> Threat Intel</span></div>
-                <div class="c">
-                    <div class="ct">Security Anomaly Log</div>
-                    <div class="tw" style="max-height:200px">
-                        <table style="font-size:0.8rem">
-                            <thead>
-                                <tr>
-                                    <th>IP</th>
-                                    <th>Error</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody id="threatTable"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div class="modal-bg" id="addSvcModal">
-        <div class="modal">
-            <div class="ct">Register Endpoint</div>
-            <input type="text" id="svc_name" class="in-text" placeholder="Service Name">
-            <select id="svc_type" class="in-text">
-                <option value="backend">Backend (API)</option>
-                <option value="frontend">Frontend (Web)</option>
-            </select>
-            <input type="text" id="svc_url" class="in-text" placeholder="Target URL (http://...)">
-            <div style="display:flex;justify-content:flex-end;gap:10px">
-                <button class="btn-outline" onclick="closeAddSvc()">Cancel</button>
-                <button class="btn" onclick="saveService()">Add</button>
+        <!-- Overview -->
+        <section id="view-overview" class="view">
+            <h2>Overview</h2>
+            <div class="cards">
+                <div class="card"><div class="label">Status</div><div class="value" id="o-status">-</div></div>
+                <div class="card"><div class="label">Uptime</div><div class="value" id="o-uptime">-</div></div>
+                <div class="card"><div class="label">Services</div><div class="value" id="o-services">-</div></div>
+                <div class="card"><div class="label">Log entries</div><div class="value" id="o-logs">-</div></div>
             </div>
+            <div class="panel">
+                <h3>Active controls</h3>
+                <ul style="margin:0;padding-left:18px">
+                    <li>AES-256-CBC encryption of tokens and request bodies</li>
+                    <li>HMAC-SHA256 signature over canonical JSON, with body hash binding</li>
+                    <li>Nonce replay protection and token expiry checks</li>
+                    <li>SSRF protection: private addresses blocked unless whitelisted</li>
+                    <li>Redirects disabled; upstream timeouts and response size limits</li>
+                    <li>Per-IP rate limiting</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Services -->
+        <section id="view-services" class="view">
+            <div class="toolbar">
+                <h2 style="margin:0">Services</h2>
+                <button class="btn" id="addServiceBtn">Add service</button>
+            </div>
+            <div class="svc-list" id="svcGrid"><div class="empty">Connect to load services.</div></div>
+        </section>
+
+        <!-- Errors -->
+        <section id="view-threats" class="view">
+            <h2>Errors</h2>
+            <p class="status" style="margin-top:-8px">Requests rejected or failed in the recent log.</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Time</th><th>Client IP</th><th>Status</th><th>Target</th></tr></thead>
+                    <tbody id="threatTable"><tr><td class="empty" colspan="4">No errors.</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Keys -->
+        <section id="view-keys" class="view">
+            <div class="toolbar">
+                <h2 style="margin:0">Keys</h2>
+                <button class="btn secondary" id="genKeysBtn">Generate new keys</button>
+            </div>
+            <p class="status" style="margin-top:0">Generation is disabled by default. Enable it with <code>security.allow_key_generation: true</code>. Generated keys are shown once; store them in your <code>.env</code> file, and do not share them.</p>
+            <div class="panel">
+                <div class="keys" id="keysOut"><div class="empty">No keys generated in this session.</div></div>
+            </div>
+        </section>
+
+        <!-- Guide -->
+        <section id="view-guide" class="view">
+            <h2>Guide</h2>
+            <div class="panel">
+                <ol class="steps">
+                    <li>
+                        <h3>Create the keys</h3>
+                        <p>Generate the keys with the Docker Hub image and save them to <code>.env</code>:</p>
+                        <pre class="cmd">docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env</pre>
+                    </li>
+                    <li>
+                        <h3>Configure</h3>
+                        <p>Copy <code>config.example.yaml</code> to <code>config.yaml</code>. Keep secrets in <code>.env</code>, not in the file.</p>
+                    </li>
+                    <li>
+                        <h3>Start</h3>
+                        <pre class="cmd">docker compose pull
+docker compose up -d</pre>
+                    </li>
+                    <li>
+                        <h3>Connect a client</h3>
+                        <p>Use the same AES key, HMAC key, XOR key, and alphabet in your client. The Python client in <code>examples/clients/python</code> is the reference implementation. See <code>docs/PANDUAN.md</code> for the protocol.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal-bg" id="addServiceModal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="modal">
+        <h3 id="addTitle">Add service</h3>
+        <label for="svcName">Name (letters, digits, - and _)</label>
+        <input id="svcName" class="field" type="text" maxlength="64" autocomplete="off">
+        <label for="svcType">Type</label>
+        <select id="svcType" class="field">
+            <option value="backend">Backend</option>
+            <option value="frontend">Frontend</option>
+            <option value="fullstack">Fullstack</option>
+        </select>
+        <label for="svcUrl">Base URL (http or https)</label>
+        <input id="svcUrl" class="field" type="text" placeholder="http://backend:8080" autocomplete="off">
+        <div class="actions">
+            <button class="btn secondary" id="cancelServiceBtn">Cancel</button>
+            <button class="btn" id="saveServiceBtn">Save</button>
         </div>
     </div>
+</div>
 
-    <script>
-        let allLogs = [];
+<script>
+    (function () {
+        "use strict";
 
-        document.querySelectorAll('.nav').forEach(b => {
-            b.addEventListener('click', () => {
-                document.querySelectorAll('.nav').forEach(n => n.classList.remove('on'));
-                document.querySelectorAll('.p').forEach(p => p.classList.remove('on'));
-                b.classList.add('on');
-                const target = document.getElementById(b.dataset.t);
-                if (target) target.classList.add('on');
-                if (b.dataset.t === 'logs-p') fetchLogs();
-                if (b.dataset.t === 'svc-p') fetchServices();
-            });
-        });
+        const $ = (id) => document.getElementById(id);
 
-        // Mencegah XSS: semua data dari API (IP, URL, nama service) di-escape sebelum dirender.
         function esc(value) {
-            return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[c]));
         }
 
-        async function apiFetch(ep, method = 'GET', body = null) {
-            const key = document.getElementById('apiKey').value;
-            const opts = { method, headers: { 'x-admin-key': key } };
-            if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+        function setStatus(text, isError) {
+            const el = $("status");
+            el.textContent = text;
+            el.classList.toggle("error", !!isError);
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            return isNaN(d) ? "-" : d.toLocaleTimeString();
+        }
+
+        function statusClass(code) {
+            if (code >= 500) return "s-bad";
+            if (code >= 400) return "s-warn";
+            return "s-ok";
+        }
+
+        function formatUptime(seconds) {
+            const s = Number(seconds) || 0;
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            return h > 0 ? `${h}h ${m}m` : `${m}m ${s % 60}s`;
+        }
+
+        // Returns { ok, status, data }. Never throws.
+        async function api(path, options = {}) {
+            const key = $("apiKey").value;
+            const init = { method: options.method || "GET", headers: { "x-admin-key": key } };
+            if (options.body !== undefined) {
+                init.headers["Content-Type"] = "application/json";
+                init.body = JSON.stringify(options.body);
+            }
             try {
-                const r = await fetch(`/admin${ep}`, opts);
-                if (r.status === 401) return null;
-                if (r.status === 204) return true;
-                return await r.json();
-            } catch (e) { return null; }
+                const res = await fetch(`/admin${path}`, init);
+                if (res.status === 204) return { ok: true, status: res.status, data: null };
+                let data = null;
+                try { data = await res.json(); } catch (_) { /* non-JSON body */ }
+                return { ok: res.ok, status: res.status, data };
+            } catch (err) {
+                return { ok: false, status: 0, data: { error: "Network error" } };
+            }
         }
 
-        async function fetchLogs() {
-            const data = await apiFetch('/logs');
-            if (!data) return;
-            allLogs = data;
-            document.getElementById('logBody').innerHTML = data.map(l => `
-        <tr class="${l.status >= 400 ? 'threat-row' : ''}">
-            <td>${new Date(l.timestamp).toLocaleTimeString()}</td>
-            <td style="color:var(--accent)">${esc(l.method)}</td>
-            <td>${esc(l.target_url.split('/').pop() || l.target_url)}</td>
-            <td>${esc(l.ip)}</td>
-            <td>${l.execution_ms}ms</td>
-            <td class="${l.status >= 400 ? 's5' : 's2'}">${l.status}</td>
-        </tr>`).join('') || '<tr><td colspan="6">No traffic</td></tr>';
-            document.getElementById('s-total').textContent = data.length;
-            document.getElementById('s-ok').textContent = data.filter(l => l.status < 300).length;
-            document.getElementById('s-4xx').textContent = data.filter(l => l.status >= 400).length;
-
-            document.getElementById('threatTable').innerHTML = data.filter(l => l.status >= 400).map(l => `
-        <tr><td>${esc(l.ip)}</td><td class="s5">Error ${esc(l.status)}</td><td>${new Date(l.timestamp).toLocaleTimeString()}</td></tr>
-    `).join('') || '<tr><td colspan="3">Clean posture</td></tr>';
+        function apiMessage(result) {
+            if (result.status === 401) return "Unauthorized: check the admin key";
+            if (result.status === 0) return "Network error: is the proxy running?";
+            if (result.data && result.data.error) return result.data.error;
+            return `Request failed (${result.status})`;
         }
 
-        async function fetchServices() {
-            const data = await apiFetch('/services');
-            if (!data) return;
-            document.getElementById('svcGrid').innerHTML = data.map(s => `
-        <div class="sc">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <span class="sn">${esc(s.name)} <i class="sb">${esc(s.type)}</i></span>
-                <button class="btn-danger" onclick="deleteService('${esc(s.name)}')"><svg style="width:12px;height:12px;stroke:currentColor"><use href="#icon-trash"/></svg></button>
-            </div>
-            <div style="font-size:0.8rem;opacity:0.7">🔗 ${esc(s.url)}</div>
-            <div style="margin-top:10px;font-size:0.7rem"><span class="hpulse"></span> Active Mapping</div>
-        </div>`).join('');
+        async function loadLogs() {
+            const r = await api("/logs");
+            if (!r.ok) { setStatus(apiMessage(r), true); return; }
+            setStatus("Connected. Updated " + new Date().toLocaleTimeString());
+
+            const logs = Array.isArray(r.data) ? r.data : [];
+            const ok = logs.filter((l) => l.status < 400).length;
+            const err = logs.length - ok;
+            $("s-total").textContent = logs.length;
+            $("s-ok").textContent = ok;
+            $("s-err").textContent = err;
+
+            $("logBody").innerHTML = logs.length
+                ? logs.map((l) => `
+                    <tr>
+                        <td>${esc(formatTime(l.timestamp))}</td>
+                        <td class="mono">${esc(l.method)}</td>
+                        <td class="mono">${esc(l.target_url)}</td>
+                        <td class="mono">${esc(l.ip)}</td>
+                        <td class="num">${esc(l.execution_ms)} ms</td>
+                        <td class="${statusClass(l.status)}">${esc(l.status)}</td>
+                    </tr>`).join("")
+                : '<tr><td class="empty" colspan="6">No requests yet.</td></tr>';
+
+            const errors = logs.filter((l) => l.status >= 400);
+            $("threatTable").innerHTML = errors.length
+                ? errors.map((l) => `
+                    <tr>
+                        <td>${esc(formatTime(l.timestamp))}</td>
+                        <td class="mono">${esc(l.ip)}</td>
+                        <td class="${statusClass(l.status)}">${esc(l.status)}</td>
+                        <td class="mono">${esc(l.target_url)}</td>
+                    </tr>`).join("")
+                : '<tr><td class="empty" colspan="4">No errors.</td></tr>';
         }
 
-        function openAddSvc() { document.getElementById('addSvcModal').classList.add('on'); }
-        function closeAddSvc() { document.getElementById('addSvcModal').classList.remove('on'); }
+        async function loadOverview() {
+            const r = await api("/stats");
+            if (!r.ok) {
+                setStatus(apiMessage(r), true);
+                ["o-status", "o-uptime", "o-services", "o-logs"].forEach((id) => $(id).textContent = "-");
+                return;
+            }
+            $("o-status").textContent = r.data.status || "-";
+            $("o-status").className = "value ok";
+            $("o-uptime").textContent = formatUptime(r.data.uptime_seconds);
+            $("o-services").textContent = r.data.services ?? "-";
+            $("o-logs").textContent = r.data.log_entries ?? "-";
+        }
 
-        async function saveService() {
-            const config = { name: document.getElementById('svc_name').value, type: document.getElementById('svc_type').value, url: document.getElementById('svc_url').value, health: "/health", timeout_ms: 10000 };
-            if (await apiFetch('/services', 'POST', config)) { closeAddSvc(); fetchServices(); }
+        async function loadServices() {
+            const r = await api("/services");
+            if (!r.ok) { $("svcGrid").innerHTML = `<div class="empty">${esc(apiMessage(r))}</div>`; return; }
+            const list = Array.isArray(r.data) ? r.data : [];
+            $("svcGrid").innerHTML = list.length
+                ? list.map((s) => `
+                    <div class="svc">
+                        <div class="svc-head">
+                            <div>
+                                <span class="svc-name">${esc(s.name)}</span>
+                                <span class="badge">${esc(s.type)}</span>
+                            </div>
+                            <button class="btn danger" data-delete="${esc(s.name)}">Remove</button>
+                        </div>
+                        <div class="svc-meta mono">${esc(s.url)}</div>
+                        <div class="svc-meta">Health: ${esc(s.health || "none")} &middot; Timeout: ${esc(s.timeout_ms)} ms</div>
+                    </div>`).join("")
+                : '<div class="empty">No services registered.</div>';
         }
 
         async function deleteService(name) {
-            if (confirm(`Remove ${name}?`)) if (await apiFetch(`/services/${name}`, 'DELETE')) fetchServices();
+            if (!window.confirm(`Remove service "${name}"?`)) return;
+            const r = await api(`/services/${encodeURIComponent(name)}`, { method: "DELETE" });
+            if (r.ok) { loadServices(); setStatus(`Removed ${name}`); }
+            else setStatus(apiMessage(r), true);
         }
 
-        async function genKeys() {
-            const keys = await apiFetch('/keys/generate');
-            if (!keys) return;
-            document.getElementById('staticKeysOut').innerHTML = Object.entries(keys).map(([k, v]) => `
-        <div class="c"><div class="stat-lbl">${esc(k)}</div><div class="key-box blur" onclick="this.classList.toggle('blur')">${esc(v)}</div></div>
-    `).join('');
-            document.getElementById('keyExport').textContent = JSON.stringify(keys, null, 4);
+        async function saveService() {
+            const body = {
+                name: $("svcName").value.trim(),
+                type: $("svcType").value,
+                url: $("svcUrl").value.trim(),
+                health: "/health",
+                timeout_ms: 10000
+            };
+            const r = await api("/services", { method: "POST", body });
+            if (r.ok) {
+                closeAddService();
+                loadServices();
+                setStatus(`Added ${body.name}`);
+            } else {
+                setStatus(apiMessage(r), true);
+            }
         }
 
-        function toggleStep(el) {
-            document.querySelectorAll('.g-step').forEach(s => s.classList.remove('on'));
-            el.parentElement.classList.add('on');
+        function openAddService() {
+            $("svcName").value = "";
+            $("svcUrl").value = "";
+            $("addServiceModal").classList.add("on");
+            $("svcName").focus();
         }
-    </script>
+        function closeAddService() { $("addServiceModal").classList.remove("on"); }
+
+        async function generateKeys() {
+            const r = await api("/keys/generate");
+            if (!r.ok) {
+                $("keysOut").innerHTML = `<div class="empty">${esc(apiMessage(r))}</div>`;
+                return;
+            }
+            $("keysOut").innerHTML = Object.entries(r.data).map(([k, v]) => `
+                <div class="key-row">
+                    <div class="k">${esc(k)}</div>
+                    <div class="v" title="Click to select" >${esc(v)}</div>
+                </div>`).join("");
+        }
+
+        function showView(name) {
+            document.querySelectorAll(".nav").forEach((b) => b.classList.toggle("on", b.dataset.view === name));
+            document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === "view-" + name));
+            if (name === "logs" || name === "threats") loadLogs();
+            if (name === "overview") loadOverview();
+            if (name === "services") loadServices();
+        }
+
+        document.querySelectorAll(".nav").forEach((b) =>
+            b.addEventListener("click", () => showView(b.dataset.view)));
+        $("connectBtn").addEventListener("click", () => {
+            loadLogs();
+            loadOverview();
+        });
+        $("apiKey").addEventListener("keydown", (e) => { if (e.key === "Enter") $("connectBtn").click(); });
+        $("addServiceBtn").addEventListener("click", openAddService);
+        $("cancelServiceBtn").addEventListener("click", closeAddService);
+        $("saveServiceBtn").addEventListener("click", saveService);
+        $("genKeysBtn").addEventListener("click", generateKeys);
+        $("svcGrid").addEventListener("click", (e) => {
+            const btn = e.target.closest("[data-delete]");
+            if (btn) deleteService(btn.dataset.delete);
+        });
+        $("addServiceModal").addEventListener("click", (e) => {
+            if (e.target === $("addServiceModal")) closeAddService();
+        });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAddService(); });
+    })();
+</script>
 </body>
-
 </html>

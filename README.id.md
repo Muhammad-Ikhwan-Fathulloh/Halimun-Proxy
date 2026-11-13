@@ -1,228 +1,160 @@
-# Halimun: High-Performance Encrypted Proxy
+# Halimun Proxy
 
-*Baca ini dalam bahasa lain: [English](README.md), [Bahasa Indonesia](README.id.md).*
-
-![Rust](https://img.shields.io/badge/rust-1.70%2B-blue.svg)
 [![CI](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions/workflows/rust.yml/badge.svg)](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Hub](https://img.shields.io/docker/pulls/ikhwan17/halimun-proxy)](https://hub.docker.com/r/ikhwan17/halimun-proxy)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 📌 Gambaran Umum
-Halimun adalah proxy tunnel asinkronus ultra-cepat berbasi Rust. Proyek ini mengenkripsi request dari ujung ke ujung menggunakan enkripsi AES-256-CBC, memvalidasinya dengan perlindungan integritas HMAC-SHA256, dan mencegah serangan duplikasi ulang menggunakan sistem perlindungan Nonce.
+Halimun adalah reverse proxy terenkripsi yang ditulis dengan Rust. Klien membungkus tujuan, method, header, dan body ke dalam satu token terenkripsi. Halimun memvalidasi token, memblokir target internal, lalu meneruskan request ke backend Anda.
 
-Dibangun di atas pilar **Axum** dan **Tokio**, Halimun memberikan lajur microservice multi-tenant yang tangguh, membiarkan Anda membuka gerbang keamanan murni secara publik, seraya menyembunyikan service internal secara terisolasi ke dalam Private Docker.
+Baca dalam bahasa lain: [English](README.md) · [Bahasa Indonesia](README.id.md)
 
----
+- **Dokumentasi lengkap:** [docs/PANDUAN.md](docs/PANDUAN.md)
+- **Image:** [ikhwan17/halimun-proxy](https://hub.docker.com/r/ikhwan17/halimun-proxy) di Docker Hub
 
-## 🚀 Quick Start (Docker)
+## Fitur
 
-Halimun dirancang sedemikian rupa agar sangat ringan dengan konsumsi memori serendah ~15MB melalui _container_ Docker Alpine.
+- Enkripsi AES-256-CBC untuk token dan body request, dengan lapisan obfuscation
+- Tanda tangan HMAC-SHA256 atas JSON kanonik, dengan pengikatan hash body
+- Perlindungan replay (nonce) dan pengecekan masa berlaku token
+- Perlindungan SSRF: alamat privat dan loopback diblokir kecuali di-whitelist secara eksplisit
+- Rate limit per IP, batas ukuran body dan respons, serta timeout ke backend
+- Admin API dan dashboard web untuk log trafik, service, dan pembuatan kunci
+- Endpoint metrik Prometheus
+- Image runtime kecil (Alpine, user non-root)
 
-**1. Persiapan Config & Kunci Enkripsi**
-Lakukan clone dan gunakan _generator_ untuk mencipta Environment aman secara acak:
+## Mulai cepat (Docker)
+
+1. Ambil image dan buat kunci:
+
+   ```bash
+   docker pull ikhwan17/halimun-proxy:latest
+   docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env > .env
+   ```
+
+   PowerShell:
+
+   ```powershell
+   docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env | Out-File -Encoding ASCII .env
+   ```
+
+   Tambahkan `HALIMUN_ADMIN_KEY` (minimal 16 karakter) ke `.env`.
+
+2. Salin konfigurasi contoh:
+
+   ```bash
+   cp config.example.yaml config.yaml
+   ```
+
+3. Buat akun login dashboard (basic auth Nginx):
+
+   ```bash
+   docker run --rm httpd:2.4-alpine htpasswd -Bbn admin "password-anda" > nginx/.htpasswd
+   ```
+
+4. Jalankan stack:
+
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+
+5. Buka `http://localhost/dashboard/`, login dengan user Nginx, lalu masukkan admin key.
+
+Build dari source, HTTPS, dan detail protokol dijelaskan di [docs/PANDUAN.md](docs/PANDUAN.md).
+
+## Konfigurasi
+
+Rahasia dibaca dari environment variable (`HALIMUN_AES_KEY`, `HALIMUN_HMAC_KEY`, `HALIMUN_XOR_KEY`, `HALIMUN_ADMIN_KEY`) dan menimpa nilai di `config.yaml`. Server menolak start jika kunci kosong, nol, atau masih berupa contoh.
+
+Validasi konfigurasi tanpa menjalankan server:
+
 ```bash
-cp .env.example .env
-
-# Ambil image resmi dari Docker Hub: https://hub.docker.com/r/ikhwan17/halimun-proxy
-docker pull ikhwan17/halimun-proxy:latest
-# Cetak kunci Kriptografi
-# Linux/macOS
-docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env > .env
-# Windows (PowerShell)
-docker run --rm ikhwan17/halimun-proxy:latest --keygen --format=env | Out-File -Encoding ASCII .env
+halimun-proxy --config config.yaml --check-config
 ```
-Isi `HALIMUN_AES_KEY`, `HALIMUN_HMAC_KEY`, dan `HALIMUN_ADMIN_KEY` di `.env` (dan salin `config.example.yaml` menjadi `config.yaml`). Kunci rahasia **tidak** ditulis di `config.yaml`. Panduan lengkap, termasuk cara pakai klien dan checklist keamanan: **[docs/PANDUAN.md](docs/PANDUAN.md)**.
 
-**2. Jalankan Cluster Produksi**
+Referensi lengkap ada di [docs/PANDUAN.md, bagian 5](docs/PANDUAN.md#5-referensi-konfigurasi).
+
+## Contoh klien
+
+Klien Python di [`examples/clients/python`](examples/clients/python) adalah implementasi referensi dan sudah diuji terhadap server.
+
+```python
+from client import HalimunClient
+
+client = HalimunClient("http://localhost/proxy/1", AES_KEY_HEX, HMAC_KEY_HEX, 172)
+res = client.request(
+    "POST",
+    "https://api.contoh.com/v1/login",
+    body=b'{"email": "user@contoh.com"}',
+    headers={"Content-Type": "application/json"},
+)
+print(res.status_code, res.text)
+```
+
+Klien Go, Node.js, dan PHP di `examples/clients/` belum diperbarui ke protokol terbaru.
+
+## Arsitektur
+
+```
+Klien ──► Nginx (TLS, rate limit, basic auth dashboard) ──► Halimun ──► Backend
+                                                             │
+                                              validasi token, cek SSRF, forward
+```
+
+Hanya Nginx yang dipublikasikan ke host. Halimun dan Admin API berjalan di jaringan internal Docker.
+
+## Keamanan
+
+- Buat kunci dengan `--keygen`. Jangan pakai nilai contoh, dan jangan commit `.env` atau `config.yaml`.
+- Jalankan Halimun di belakang konfigurasi Nginx yang disertakan, dan aktifkan HTTPS di depannya.
+- Biarkan `security.allow_key_generation` nonaktif kecuali benar-benar diperlukan.
+- Rotasi kunci: buat kunci baru, perbarui `.env`, lalu restart. Klien harus memakai kunci yang sama.
+
+Jangan melaporkan kerentanan lewat issue publik. Gunakan fitur private vulnerability reporting di GitHub untuk repositori ini.
+
+## Pengembangan
+
 ```bash
-docker compose pull
-docker compose up -d
-```
-Ingin build dari source sendiri? Lihat bagian "Build lokal" di [docs/PANDUAN.md](docs/PANDUAN.md).
-*Trafik produksi Anda kini dapat didengarkan secara aman lewat Port `80` sementara target sistem internal Anda disembunyikan rapat-rapat!*
-
----
-
-## 🏗️ Struktur Arsitektur
-
-Bagian ini memodelkan letak proxy di dalam infrastruktur Anda. Halimun berada di tengah antara Nginx (dunia luar) dan Microservice (dunia internal).
-
-```mermaid
-sequenceDiagram
-    participant C as Klien (Frontend/Mobile)
-    participant N as Nginx (Gateway Luar)
-    participant H as Halimun Proxy (Rust)
-    participant B as Target Layanan (Backend Intranet)
-
-    C->>C: Bangun dan Enkripsi Payload ke Base32
-    C->>N: HTTPS POST /proxy/1/OBFUSCATED...
-    N->>N: Limitas Rate (100 r/s) & Log
-    N->>H: Teruskan HTTP Request
-    H->>H: Dekripsi Token & Validasi HMAC
-    H->>H: Cek Duplikasi Nonce (ReplayGuard)
-    H->>H: Tolak Filter Intranet (SSRF Guard)
-    H->>B: Hubungkan ke Endpoint Internal (Mapping Registry)
-    B-->>H: Respons Native (JSON/HTML/Websocket)
-    H-->>N: Stream Respons ke Publik
-    N-->>C: Kembalikan Data Terdekripsi ke User
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo build --release
 ```
 
-### 🧠 Konsep Lengkap Penggunaannya
+`tests/e2e.rs` menjalankan backend dan proxy di loopback, lalu memeriksa alur request, penolakan replay, integritas body, validasi HMAC, dan pemblokiran SSRF.
 
-Siklus sebuah Request yang ditangani Halimun melewati berbagai pos perlindungan berikut ini:
+Struktur proyek:
 
-```mermaid
-flowchart TD
-    A[Client Request HTTP] -->|Enkripsi Payload via AES-256-CBC| B(Enkripsi Khas)
-    B -->|Bungkus bersama HMAC-SHA256| C(Final Base32)
-    C -->|Kirim lewat URL Kamuflase| D[Nginx Reverse Proxy Edge]
-    D -->|Lewati Rate Limiter| E[Mesin Halimun]
-    E --> F{Lakukan Validasi API}
-    F -->|HMAC Rusak / Berubah| G[403 Invalid HMAC]
-    F -->|Koneksi Lampau/Double| H[403 Replay Attack Blocked]
-    F -->|Pemalsuan Internal IP| I[403 SSRF Forbidden]
-    F -->|Request Aman| J[Dekripsi Payload Sejati]
-    J --> K[Temukan Backend lewat Registry YAML]
-    K --> L[Meneruskan Request ke Target Container]
-    L -->|Streaming Balasan| E
-    E -->|Streaming Balasan| D
-    D -->|Streaming Balasan| A
+```
+src/
+  config.rs        pemuatan dan validasi konfigurasi
+  crypto/          AES-CBC, HMAC, Base32, obfuscation, codec
+  token/           payload token, validator, replay guard
+  security/        rate limiter, pengecekan dan resolver SSRF
+  services/        registry, health check, log, admin API
+  proxy/           handler HTTP
+dashboard/         antarmuka admin web (satu file HTML)
+nginx/             konfigurasi gateway
+examples/clients/  implementasi klien
+docs/              panduan penggunaan
 ```
 
-Konsep kunci dalam ekosistem Halimun Proxy:
-1. **End-to-End Payload Hiding**: Payload utama dan endpoint API target `dirahasiakan` sejak di perangkat Front-end klien. 
-2. **Kekebalan Replay Guard**: Setiap payload memiliki **Nonce** dan **Timestamp** yang dimasukkan ke basis memori (DashMap) Halimun. Jika ada penyerang menyalin request yang persis sama, request tersebut akan dibunuh di gerbang.
-3. **URL Kamuflase**: Halimun tak pernah memakai nama target API secara aslinya, melainkan memakai deretan huruf acak. Hal ini menyulitkan Web Application Firewall (WAF) atau analis peretas saat membaca profil trafik Anda.
+Sebelum membuka pull request, baca [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### Tatanan Source Code
-```text
-halimun-proxy/
-├── src/
-│   ├── crypto/            # Kernel Enkripsi: AES-CBC, HMAC-SHA256, XOR, Custom Base32
-│   ├── token/             # Representasi Payload Token dan Validasi
-│   ├── security/          # Laju Batas Permintaan & Pertahanan SSRF
-│   ├── services/          # Dynamic Routing Registry, Pengawasan API & Logger
-│   ├── proxy/             # Mesin HTTP Handler (Axum Proxy)
-│   └── main.rs            # Entrypoint Inisiasi
-├── dashboard/             # Antarmuka Admin GUI (HTML & Glassmorphism UI)
-├── nginx/                 # Konfigurasi Pertahanan Gerbang Tepi
-├── examples/              # Contoh SDK Client Eksternal untuk Python, Go, Node.js dll
-├── Dockerfile             # Multi-stage Rust to Alpine
-└── config.yaml            # Pemetaan target rute API
-```
+## Referensi dan inspirasi
 
----
+Halimun dibangun dengan ide dari proyek open-source berikut:
 
-## 📦 Skema Token & Payload
+| Proyek | Deskripsi | Stack |
+| --- | --- | --- |
+| [Latebra](https://github.com/exphert/Latebra) | Proxy request terenkripsi dengan AES-256-CBC, HMAC-SHA256, dan pencegahan replay berbasis nonce | PHP / Laravel |
+| [rathole](https://github.com/rathole-org/rathole) | Reverse proxy berkinerja tinggi untuk NAT traversal dengan Noise Protocol dan TLS | Rust |
+| [frp](https://github.com/fatedier/frp) | Reverse proxy cepat untuk TCP, UDP, HTTP, dan HTTPS dengan TLS | Go |
+| [Ghostunnel](https://github.com/ghostunnel/ghostunnel) | Proxy TLS dengan autentikasi mutual TLS untuk backend non-TLS | Go |
+| [rustunnel](https://github.com/joaoh82/rustunnel) | Server tunnel self-hosted untuk mengekspos layanan lokal lewat WebSocket terenkripsi TLS | Rust |
+| [Proxytunnel](https://github.com/proxytunnel/proxytunnel) | Tunneling koneksi melalui proxy HTTP(S) dengan SSL/TLS | C |
+| [RustCrypto](https://github.com/RustCrypto) | Primitif kriptografi (AES, HMAC, SHA-2) | Rust |
 
-Hatimun menyamarkan Request lewat URL Kamuflase. Setiap koneksi berwujud:
+## Lisensi
 
-**Struktur URL:**
-```text
-POST /proxy/1/SEGMEN_1/SEGMEN_2/SEGMEN_3/SEGMEN_4/SEGMEN_5
-```
-Hanya salah satu dari Segmen URL Path di atas yang membawa identitas rahasia, sedangkan segmen-segmen lainnya diisi otomatis oleh data acak secara _random_ untuk mengecoh analisa pola penyerang.
-
-**Form Request Parameter (URL Encoded):**
-```text
-POST /proxy/1/XYZ...
-Content-Type: application/x-www-form-urlencoded
-
-x=ENCRYPTED_BODY_BASE32
-```
-
-### Contoh Permintaan Utuh (Raw Network)
-```http
-POST /proxy/1/VQYXGZL.../KQXGYZTP.../JNZWQ4T.../AB4XGZLWF.../KQXG... HTTP/1.1
-Host: domain-anda.com
-Content-Type: application/x-www-form-urlencoded
-
-x=JZSWY3DQEA5GQZJY4TSSEBQWFI7DKCJRFYYDELJYJ5HE2LMMZ2HU6DTPN5G...
-```
-
-### Breakdown Payload Token (Apabila didekripsi)
-Di dalam parameter `x=` dan `url_segment`, sistem akan membongkarnya menjadi instruksi:
-```json
-{
-  "api_url": "http://backend_target:80/api/auth/login",
-  "api_header": {
-    "Authorization": "Bearer TOKEN|ID",
-    "Content-Type": "application/json"
-  },
-  "method": "POST",
-  "timestamp": 1715517600,
-  "expired": 300,
-  "offset": "+00:00",
-  "nonce": "550e8400-e29b-41d4-a716-446655440000",
-  "hmac": "8f14e45fceea167a5a36dedd4bea2543fd7144c883569d94a7350eca6d47161"
-}
-```
-
-### Response Flow & Error Status
-Bila sukses, Halimun akan mem-bypass balasan kemurnian milik Backend tanpa mengubah apapun (Bisa berwujud JSON, XML, Video Stream, dll).
-
-Namun, bila Request itu bermasalah, Halimun secara tangkas membunuhnya di garis terdepan:
-* Manipulasi Enkripsi (400): `{ "error": "Decryption failed: invalid token...", "code": 400 }`
-* Payload Diretas/Diubah (403): `{ "error": "Invalid HMAC", "code": 403 }`
-* Serangan Duplikasi Nonce (403): `{ "error": "Nonce replayed", "code": 403 }`
-* Target Mengarahkan ke IP Local Intranet (SSRF Blok) (403): `{ "error": "Forbidden: Cannot proxy to internal addresses", "code": 403 }`
-
----
-
-## 🛡️ Standar Pertahanan Siber
-- ✅ **AES-256-CBC Encryption** - Mekanisme kriptografi simetris paling stabil.
-- ✅ **HMAC-SHA256** - Menjaga kesatuan payload; bila 1 karakter dimodifikasi hacker, HMAC gagal total.
-- ✅ **Nonce Memory Storage** - Mencegah pesan lama diulang (_Replay Guard_).
-- ✅ **SSRF Protection** - Memblokir keras permintaan yang mencoba mencari tau IP Intranet (`192.168.x`).
-- ✅ **Rate Limiting Ganda** - Pembatasan beban permintaan di Handle secara simultan via Nginx dan Sistem Rust.
-- ✅ **Custom Obfuscation (XOR)** - Algoritma rotasi bit tambahan menggunakan Base32 tanpa bantalan (Unpadded).
-
----
-
-## 🤖 Analytics Dashboard
-Halimun dibekali GUI Administratif ringan (*Glassmorphism Design*) yang berdiri sendiri tanpa _framework npm_ rumit. 
-Kunjungi **`http://localhost/dashboard/`** (login memakai user Nginx basic auth yang Anda buat sendiri dengan `htpasswd`; tidak ada kredensial default)
-
-Fitur utama Dashboard:
-1. **Live Traffic Logs**: Memantau Request rute dan latensi detik itu juga.
-2. **Registry Hub**: Mengamati kemana Microservice ini saling tertuju secara arsitektur.
-3. **Key Exchange**: Mencetak paket AES Key dari jarak jauh.
-
----
-
-## 🧪 Tahapan Testing
-
-### 1. Unit Tests (Murni Rust)
-Bila PC Anda terinstal konfigurasi _Rust Toolchain_ (`cargo`), silakan jalankan simulasi algoritma kriptografi lengkap:
-```bash
-cargo fmt && cargo clippy -- -D warnings
-cargo test 
-```
-
-### 2. Standalone Code Execution
-Menyalakan perute program tanpa memuat konfigurasi YAMl/Nginx:
-```bash
-cargo run --example standalone_proxy
-```
-Silakan lihat implementasi Klien (_Frontend & Backend Integration SDKs_) Python, Go, Node.js, dan PHP bersemayam di dalam direkotri **`examples/clients/`**.
-
----
-
-## 📚 Referensi & Inspirasi
-
-Halimun dibangun dengan ide dan inspirasi yang diambil dari proyek-proyek open-source luar biasa berikut ini:
-
-| Proyek                                                    | Deskripsi                                                                                   | Stack         |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------- |
-| [Latebra](https://github.com/exphert/Latebra)             | Proxy terenkripsi dengan AES-256-CBC, HMAC-SHA256, dan pencegahan serangan replay via nonce | PHP / Laravel |
-| [rathole](https://github.com/rathole-org/rathole)         | Reverse proxy berkinerja tinggi untuk NAT traversal dengan enkripsi Noise Protocol & TLS    | Rust          |
-| [frp](https://github.com/fatedier/frp)                    | Fast reverse proxy mendukung TCP/UDP/HTTP/HTTPS dengan enkripsi TLS                         | Go            |
-| [Ghostunnel](https://github.com/ghostunnel/ghostunnel)    | Proxy TLS sederhana dengan autentikasi mutual TLS (mTLS) untuk mengamankan backend non-TLS  | Go            |
-| [rustunnel](https://github.com/joaoh82/rustunnel)         | Server tunnel self-hosted yang mengekspos layanan lokal via WebSocket terenkripsi TLS       | Rust          |
-| [Proxytunnel](https://github.com/proxytunnel/proxytunnel) | Tool klasik untuk tunneling koneksi melalui proxy HTTP(S) dengan SSL/TLS                    | C             |
-| [RustCrypto](https://github.com/RustCrypto)               | Ekosistem primitif kriptografi Rust yang diaudit komunitas (AES, HMAC, SHA2, dll.)          | Rust          |
-
----
-
-## 📄 Lisensi
-Proyek ini bersifat *Open Source* di bawah lisensi **MIT License**.
-Lihat berkas [LICENSE](LICENSE) atau kunjungi [Muhammad-Ikhwan-Fathulloh/Halimun-Proxy](https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy) untuk detail lebih lanjut.
+Dirilis di bawah [lisensi MIT](LICENSE).

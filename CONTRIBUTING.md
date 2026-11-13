@@ -1,31 +1,51 @@
 # Contributing to Halimun Proxy
 
-First off, thank you for considering contributing to Halimun Proxy! It's people like you that make open-source a great community.
+Thank you for considering a contribution. Useful contributions include bug fixes, tests, documentation improvements, and client implementations for other languages.
 
-1. **Documentation**: Adding more examples or fixing typos.
+## Getting started
 
-## 🛠️ Development Workflow
+1. Fork the repository and clone your fork.
+2. Create a branch from `main`, for example `fix/nonce-cleanup` or `docs/client-guide`.
+3. Make your change. Keep the scope small, and update documentation when behaviour changes.
 
-1. Fork the repository.
-2. Clone your fork locally (`git clone https://github.com/Muhammad-Ikhwan-Fathulloh/Halimun-Proxy.git`).
-3. Create a branch (`git checkout -b feature/amazing-feature`).
-4. Make your changes in Rust or the HTML Dashboard.
-5. Run the tests before pushing:
-   ```bash
-   cargo fmt
-   cargo clippy
-   cargo test
-   cargo build --release
-   ```
-6. Commit your changes (`git commit -m "feat: Add Redis cache layer"`).
-7. Push to the branch (`git push origin feature/amazing-feature`).
-8. Open a Pull Request!
+## Before opening a pull request
 
-## 🐛 Reporting Bugs
+Run the same checks as CI:
 
-If you find a bug, please create an Issue using the GitHub Issue Tracker. Include:
-- A clear description of the problem.
-- Your OS and Rust version.
-- Related error logs (from the `docker logs` or the Cargo build trace).
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo build --release
+```
 
-Thank you for helping us keep Halimun secure and performant!
+If you changed the dashboard, open `dashboard/index.html` in a browser against a running Admin API and check the affected views.
+
+## Commit messages
+
+Use short, imperative messages with a type prefix, for example:
+
+- `fix: reject bodies without matching body_sha256`
+- `feat: add per-service timeout to health checks`
+- `docs: clarify key rotation`
+
+## Pull requests
+
+- Describe what changed and why.
+- Note any protocol, configuration, or API change. These affect existing clients and deployments.
+- Link related issues.
+
+## Reporting bugs
+
+Open an issue and include:
+
+- A short description of the problem and the expected behaviour.
+- Steps to reproduce.
+- Your OS, Docker or Rust version, and the Halimun version.
+- Relevant logs from `docker compose logs halimun-proxy` or the cargo output.
+
+Do not include real keys, passwords, or `.env` contents in issues.
+
+## Security issues
+
+Do not open a public issue for a vulnerability. Use GitHub's private vulnerability reporting for this repository.
