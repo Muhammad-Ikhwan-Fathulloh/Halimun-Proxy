@@ -86,6 +86,7 @@
         .status { color: var(--muted); font-size: 13px; }
         .status.error { color: var(--bad); }
 
+        .api-key { width: 280px; }
         input.field, select.field {
             background: var(--panel);
             border: 1px solid var(--line);
@@ -222,13 +223,47 @@
         .modal label { color: var(--muted); font-size: 12px; }
         .modal .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 
+        /* Mobile: navigasi horizontal yang bisa digeser, kontrol selebar layar,
+           tabel dengan kolom sekunder disembunyikan (klik-untuk-geser tetap tersedia). */
         @media (max-width: 760px) {
             .layout { grid-template-columns: 1fr; }
-            .sidebar { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 10px; }
-            .brand { padding: 0 8px 0 0; }
-            .sidebar .version { display: none; }
-            .main { padding: 16px; }
-            .key-row { grid-template-columns: 1fr; }
+            .sidebar {
+                position: sticky; top: 0; z-index: 5;
+                flex-direction: row; align-items: center;
+                border-right: 0; border-bottom: 1px solid var(--line);
+                padding: 8px 10px; gap: 4px;
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+            }
+            .brand, .sidebar .version { display: none; }
+            .nav { flex: 0 0 auto; white-space: nowrap; padding: 8px 12px; min-height: 40px; }
+            .main { padding: 14px; }
+            h2 { font-size: 16px; }
+            .topbar { flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 14px; }
+            .topbar .spacer { display: none; }
+            .topbar .status { font-size: 12.5px; }
+            .api-key { width: 100%; }
+            .topbar .btn { min-height: 40px; }
+            .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .card { padding: 12px; }
+            .card .value { font-size: 19px; }
+            .table-wrap { max-height: none; }
+            th, td { padding: 8px 10px; font-size: 13px; }
+            .hide-sm { display: none; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .toolbar .btn { min-height: 40px; }
+            .svc-list { grid-template-columns: 1fr; }
+            .svc-head .btn { min-height: 36px; }
+            .panel { padding: 12px; }
+            .key-row { grid-template-columns: 1fr; gap: 4px; }
+            .key-row .k { font-size: 12px; }
+            .modal-bg { align-items: flex-end; padding: 0; }
+            .modal { max-width: none; border-radius: 12px 12px 0 0; padding: 18px; }
+            .modal .actions .btn { flex: 1; min-height: 40px; }
+            .modal input, .modal select { min-height: 40px; font-size: 16px; } /* 16px mencegah zoom otomatis iOS */
+            .topbar input.field { min-height: 40px; font-size: 16px; }
+        }
+        @media (max-width: 380px) {
+            .cards { grid-template-columns: 1fr; }
         }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
     </style>
@@ -248,7 +283,7 @@
 
     <main class="main">
         <div class="topbar">
-            <input id="apiKey" class="field" type="password" placeholder="Admin key (HALIMUN_ADMIN_KEY)" autocomplete="off" style="width:280px">
+            <input id="apiKey" class="field api-key" type="password" placeholder="Admin key (HALIMUN_ADMIN_KEY)" autocomplete="off">
             <button class="btn" id="connectBtn">Connect</button>
             <span class="spacer"></span>
             <span id="status" class="status">Not connected</span>
@@ -265,7 +300,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>Time</th><th>Method</th><th>Target</th><th>Client IP</th><th class="num">Latency</th><th>Status</th></tr>
+                        <tr><th>Time</th><th class="hide-sm">Method</th><th>Target</th><th>Client IP</th><th class="num hide-sm">Latency</th><th>Status</th></tr>
                     </thead>
                     <tbody id="logBody"><tr><td class="empty" colspan="6">Connect to load recent requests.</td></tr></tbody>
                 </table>
@@ -455,10 +490,10 @@ docker compose up -d</pre>
                 ? logs.map((l) => `
                     <tr>
                         <td>${esc(formatTime(l.timestamp))}</td>
-                        <td class="mono">${esc(l.method)}</td>
+                        <td class="mono hide-sm">${esc(l.method)}</td>
                         <td class="mono">${esc(l.target_url)}</td>
                         <td class="mono">${esc(l.ip)}</td>
-                        <td class="num">${esc(l.execution_ms)} ms</td>
+                        <td class="num hide-sm">${esc(l.execution_ms)} ms</td>
                         <td class="${statusClass(l.status)}">${esc(l.status)}</td>
                     </tr>`).join("")
                 : '<tr><td class="empty" colspan="6">No requests yet.</td></tr>';
